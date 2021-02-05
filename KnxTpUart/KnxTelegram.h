@@ -12,6 +12,8 @@
 
 #include "Arduino.h"
 
+#define KNX_ADDR(aUpper, aMid, aLower) ( (((uint16_t)aUpper) & 0x0F) << 12 | (((uint16_t)aMid) & 0x0F) << 8 | (aLower & 0xFF) )
+
 #define MAX_KNX_TELEGRAM_SIZE 23
 #define KNX_TELEGRAM_HEADER_SIZE 6
 
@@ -66,54 +68,61 @@ class KnxTelegram {
     KnxTelegram();
 
     void clear();
-    void setBufferByte(int index, int content);
-    int getBufferByte(int index);
-    void setPayloadLength(int size);
+    void setBufferByte(uint8_t aIndex, uint8_t aContent);
+    uint8_t getBufferByte(uint8_t aIndex);
+    void setPayloadLength(uint8_t aSize);
     int getPayloadLength();
-    void setRepeated(bool repeat);
+    void setRepeated(bool aRepeat);
     bool isRepeated();
-    void setPriority(KnxPriorityType prio);
+    void setPriority(KnxPriorityType aPrio);
     KnxPriorityType getPriority();
-    void setSourceAddress(int area, int line, int member);
+    void setSourceAddress(uint8_t aArea, uint8_t aLine, uint8_t aMember);
+    void setSourceAddress(uint16_t aAddress);
+    uint16_t getSourceAddress();
     int getSourceArea();
     int getSourceLine();
     int getSourceMember();
-    void setTargetGroupAddress(int main, int middle, int sub);
-    void setTargetIndividualAddress(int area, int line, int member);
+    void setTargetAddress(uint16_t aAddress, bool aIsGroup);
+    void setTargetGroupAddress(uint8_t aMain, uint8_t aMiddle, uint8_t aSub);
+    void setTargetGroupAddress(uint16_t aAddress);
+    void setTargetIndividualAddress(uint8_t aArea, uint8_t aLine, uint8_t aMember);
+    void setTargetIndividualAddress(uint16_t aAddress);
     bool isTargetGroup();
     int getTargetMainGroup();
     int getTargetMiddleGroup();
     int getTargetSubGroup();
+    uint16_t getTargetAddress();
+    uint16_t getTargetGroupAddress();
     int getTargetArea();
     int getTargetLine();
     int getTargetMember();
-    void setRoutingCounter(int counter);
+    void setRoutingCounter(uint8_t aCounter);
     int getRoutingCounter();
-    void setCommand(KnxCommandType command);
+    void setCommand(KnxCommandType aCommand);
     KnxCommandType getCommand();
 
-    void setFirstDataByte(int data);
-    int getFirstDataByte();
+    void setFirstDataByte(uint8_t aData);
+    uint8_t getFirstDataByte();
     bool getBool();
 
-    int get4BitIntValue();
+    int8_t get4BitIntValue();
     bool get4BitDirectionValue();
     byte get4BitStepsValue();
 
-    void set1ByteIntValue(int value);
+    void set1ByteIntValue(int aValue);
     int get1ByteIntValue();
 
-    void set2ByteIntValue(int value);
+    void set2ByteIntValue(int aValue);
     int get2ByteIntValue();
-    void set2ByteFloatValue(float value);
+    void set2ByteFloatValue(float aValue);
     float get2ByteFloatValue();
 
-    void set3ByteTime(int weekday, int hour, int minute, int second);
+    void set3ByteTime(uint8_t weekday, uint8_t hour, uint8_t minute, uint8_t second);
     int get3ByteWeekdayValue();
     int get3ByteHourValue();
     int get3ByteMinuteValue();
     int get3ByteSecondValue();
-    void set3ByteDate(int day, int month, int year);
+    void set3ByteDate(uint8_t day, uint8_t month, uint8_t year);
     int get3ByteDayValue();
     int get3ByteMonthValue();
     int get3ByteYearValue();
@@ -127,16 +136,16 @@ class KnxTelegram {
     void createChecksum();
     bool verifyChecksum();
     int getChecksum();
-    void print(TPUART_SERIAL_CLASS*);
+    void print(TPUART_SERIAL_CLASS* aPort);
     int getTotalLength();
     KnxCommunicationType getCommunicationType();
-    void setCommunicationType(KnxCommunicationType);
+    void setCommunicationType(KnxCommunicationType aType);
     int getSequenceNumber();
-    void setSequenceNumber(int);
+    void setSequenceNumber(uint8_t aSequence);
     KnxControlDataType getControlData();
-    void setControlData(KnxControlDataType);
+    void setControlData(KnxControlDataType aType);
   private:
-    int buffer[MAX_KNX_TELEGRAM_SIZE];
+    byte buffer[MAX_KNX_TELEGRAM_SIZE];
     int calculateChecksum();
 
 };
