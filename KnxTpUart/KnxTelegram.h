@@ -12,7 +12,9 @@
 
 #include "Arduino.h"
 
-#define KNX_ADDR(aUpper, aMid, aLower) ( (((uint16_t)aUpper) & 0x0F) << 12 | (((uint16_t)aMid) & 0x0F) << 8 | (aLower & 0xFF) )
+#define KNX_GA(aUpper, aMid, aLower) ( (((uint16_t)aUpper) & 0x1F) << 11 | (((uint16_t)aMid) & 0x07) << 8 | (aLower & 0xFF) )
+
+#define KNX_IA(aArea, aLine, aMember) ( (((uint16_t)aArea) & 0x0F) << 12 | (((uint16_t)aLine) & 0x0F) << 8 | (aMember & 0xFF) )
 
 #define MAX_KNX_TELEGRAM_SIZE 23
 #define KNX_TELEGRAM_HEADER_SIZE 6

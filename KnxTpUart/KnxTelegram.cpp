@@ -105,7 +105,7 @@ void KnxTelegram::setTargetAddress(uint16_t aAddress, bool aIsGroup)
 }
 
 void KnxTelegram::setTargetGroupAddress(uint8_t main, uint8_t middle, uint8_t sub) {
-  buffer[3] = ((main & 0x0F) << 4) | (middle & 0x0F);
+  buffer[3] = ((main & 0x1F) << 3) | (middle & 0x07);
   buffer[4] = (sub & 0xFF);
   buffer[5] = buffer[5] | B10000000;
 }
@@ -135,7 +135,7 @@ bool KnxTelegram::isTargetGroup() {
 }
 
 int KnxTelegram::getTargetMainGroup() {
-  return ((buffer[3] & B01111000) >> 3);
+  return ((buffer[3] & B11111000) >> 3);
 }
 
 int KnxTelegram::getTargetMiddleGroup() {
