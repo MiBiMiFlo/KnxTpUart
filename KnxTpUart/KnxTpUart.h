@@ -113,7 +113,12 @@ class KnxTpUart {
      */
     void sendNotAddressed();
 
-
+    /**
+     * Send a boolean (1bit) value to a group address.
+     * @param aAddress the address to write to.
+     * @param aValue the value to write.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupWriteBool(String aAddress, bool aValue);
     bool groupWriteBool(uint16_t aAddress, bool aValue);
 
