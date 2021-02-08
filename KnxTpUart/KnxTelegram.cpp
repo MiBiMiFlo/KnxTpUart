@@ -31,7 +31,7 @@ uint8_t KnxTelegram::getBufferByte(uint8_t index) {
 }
 
 void KnxTelegram::setBufferByte(uint8_t index, uint8_t aContent) {
-  buffer[index] = content;
+  buffer[index] = aContent;
 }
 
 bool KnxTelegram::isRepeated() {
