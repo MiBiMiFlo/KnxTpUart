@@ -10,7 +10,11 @@
 #ifndef KnxTpUart_h
 #define KnxTpUart_h
 
-#include "HardwareSerial.h"
+#if defined(__AVR_ATtiny1614__) || defined(__AVR_ATtiny3216__) // For new Tiny
+#include <api/HardwareSerial.h>
+#else
+#include <HardwareSerial.h>
+#endif
 #include "Arduino.h"
 
 #include "KnxTelegram.h"

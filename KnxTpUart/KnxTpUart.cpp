@@ -120,6 +120,19 @@ void KnxTpUart::checkErrors() {
   if (UCSR0A & B00000100) {
     TPUART_DEBUG_PORT.println("Parity Error");
   }
+#elif defined(__AVR_ATtiny1614__) || defined(__AVR_ATtiny3216__) // For new Tiny
+    // TODO: check if this works correct
+    if (USART0.RXDATAH & B00000100) {
+      TPUART_DEBUG_PORT.println("Frame Error");
+    }
+
+    if (USART0.RXDATAH & B00000010) {
+      TPUART_DEBUG_PORT.println("Parity Error");
+    }
+
+    if (USART0.RXDATAH & B01000000) {
+      TPUART_DEBUG_PORT.println("Overrun");
+    }
 #else
   if (UCSR1A & B00010000) {
     TPUART_DEBUG_PORT.println("Frame Error");
