@@ -675,3 +675,26 @@ String KnxTelegram::get14ByteValue() {
   _load[13] = buffer[8 + 13];
   return (_load);
 }
+
+
+uint8_t KnxTelegram::getValue(byte* aBuffer, uint8_t aCount)
+{
+	if (getPayloadLength() < aCount)
+	{
+		aCount = getPayloadLength();
+	}
+	memcpy(aBuffer, buffer+8, aCount);
+	return aCount;
+}
+
+void KnxTelegram::setValue(byte* aBuffer, uint8_t aSize)
+{
+	if (aSize > 14)
+	{
+		// ignore
+		return;
+	}
+
+	setPayloadLength(aSize+2);
+	memcpy(buffer+8, aBuffer, aSize);
+}

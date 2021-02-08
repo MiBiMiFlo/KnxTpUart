@@ -12,11 +12,24 @@
 
 #include "Arduino.h"
 
+/**
+ * Helper that builds a uint16_t from a 3 part group address
+ */
 #define KNX_GA(aUpper, aMid, aLower) ( (((uint16_t)aUpper) & 0x1F) << 11 | (((uint16_t)aMid) & 0x07) << 8 | (aLower & 0xFF) )
 
+/**
+ * Helper that builds a uint16_t from a 3 part individual address
+ */
 #define KNX_IA(aArea, aLine, aMember) ( (((uint16_t)aArea) & 0x0F) << 12 | (((uint16_t)aLine) & 0x0F) << 8 | (aMember & 0xFF) )
 
+/**
+ * The maximum telegram size.
+ */
 #define MAX_KNX_TELEGRAM_SIZE 23
+
+/**
+ * The KNX telegram header size.
+ */
 #define KNX_TELEGRAM_HEADER_SIZE 6
 
 #define TPUART_SERIAL_CLASS Stream
@@ -148,6 +161,19 @@ class KnxTelegram {
 
     void set14ByteValue(String value);
     String get14ByteValue();
+
+    /**
+     * Receive the value into the given buffer.
+     * @param aBuffer the buffer to store the value into
+     * @param aSize the size of the buffer.
+     * @return the number of bytes copied.
+     */
+    uint8_t getValue(byte* aBuffer, uint8_t aSize);
+
+    /**
+     * Set the data value from given buffer
+     */
+    void setValue(byte* aBuffer, uint8_t aSize);
 
     void createChecksum();
     bool verifyChecksum();
