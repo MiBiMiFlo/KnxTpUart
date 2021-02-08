@@ -12,20 +12,25 @@
 KnxTpUart::KnxTpUart(TPUART_SERIAL_CLASS* sport, String address) {
     _serialport = sport;
     setIndividualAddress(getSourceAddress(address));
-
-    _listen_group_address_count = 0;
-    _tg = new KnxTelegram();
-    _tg_ptp = new KnxTelegram();
-    _listen_to_broadcasts = false;
+    init();
 }
 
 KnxTpUart::KnxTpUart(TPUART_SERIAL_CLASS* sport, uint16_t aAddress) {
     _serialport = sport;
-    mSourceAddress = aAddress;
-    _listen_group_address_count = 0;
+    setIndividualAddress(aAddress);
+    init();
+}
+
+void KnxTpUart::init(void)
+{
     _tg = new KnxTelegram();
-    _tg_ptp = new KnxTelegram();
     _listen_to_broadcasts = false;
+    mTelegramCheckCallback = NULL;
+
+#if defined(MAX_LISTEN_GROUP_ADDRESSES)
+    _listen_group_address_count = 0;
+#endif
+
 }
 
 void KnxTpUart::setListenToBroadcasts(bool listen) {
@@ -94,8 +99,9 @@ KnxTpUartSerialEventType KnxTpUart::serialEvent() {
 }
 
 
-bool KnxTpUart::isKNXControlByte(uint8_t b) {
-  return ( (b | B00101100) == B10111100 ); // Ignore repeat flag and priority flag
+bool KnxTpUart::isKNXControlByte(uint8_t aByte) {
+    // Ignore repeat flag and priority flag
+	return ( (aByte | B00101100) == B10111100 );
 }
 
 void KnxTpUart::checkErrors() {
@@ -145,14 +151,14 @@ void KnxTpUart::checkErrors() {
 #endif
 }
 
-void KnxTpUart::printByte(uint8_t incomingByte) {
+void KnxTpUart::printByte(uint8_t aByte) {
 #if defined(TPUART_DEBUG)
   TPUART_DEBUG_PORT.print("Incoming Byte: ");
-  TPUART_DEBUG_PORT.print(incomingByte, DEC);
+  TPUART_DEBUG_PORT.print(aByte, DEC);
   TPUART_DEBUG_PORT.print(" - ");
-  TPUART_DEBUG_PORT.print(incomingByte, HEX);
+  TPUART_DEBUG_PORT.print(aByte, HEX);
   TPUART_DEBUG_PORT.print(" - ");
-  TPUART_DEBUG_PORT.print(incomingByte, BIN);
+  TPUART_DEBUG_PORT.print(aByte, BIN);
   TPUART_DEBUG_PORT.println();
 #endif
 }
@@ -181,20 +187,31 @@ bool KnxTpUart::readKNXTelegram() {
   _tg->print(&TPUART_DEBUG_PORT);
 #endif
 
-  // Verify if we are interested in this message - GroupAddress
-  bool interested = _tg->isTargetGroup() && isListeningToGroupAddress(_tg->getTargetGroupAddress());
+  bool interested = false;
+  if (mTelegramCheckCallback != NULL)
+  {
+	  interested |=mTelegramCheckCallback(_tg);
+  }
+
+  if (!interested)
+  {
+	  // Verify if we are interested in this message - GroupAddress
+	  interested = _tg->isTargetGroup() && isListeningToGroupAddress(_tg->getTargetGroupAddress());
+  }
 
   // Physical address
-  interested = interested || ((!_tg->isTargetGroup()) && _tg->getTargetAddress() == mSourceAddress);
+  interested |= ((!_tg->isTargetGroup()) && _tg->getTargetAddress() == mSourceAddress);
 
   // Broadcast (Programming Mode)
-  interested = interested || (_listen_to_broadcasts && _tg->isTargetGroup() && _tg->getTargetMainGroup() == 0 && _tg->getTargetMiddleGroup() == 0 && _tg->getTargetSubGroup() == 0);
+  interested |= (_listen_to_broadcasts && _tg->isTargetGroup() && _tg->getTargetGroupAddress() == 0x0000);
 
-  if (interested) {
-    sendAck();
+  if (interested)
+  {
+      sendAck();
   }
-  else {
-    sendNotAddressed();
+  else
+  {
+      sendNotAddressed();
   }
 
   if (_tg->getCommunicationType() == KNX_COMM_UCD) {
@@ -209,7 +226,8 @@ bool KnxTpUart::readKNXTelegram() {
     TPUART_DEBUG_PORT.println(" received");
 #endif
     if (interested) {
-      sendNCDPosConfirm(_tg->getSequenceNumber(), _tg->getSourceArea(), _tg->getSourceLine(), _tg->getSourceMember()); // Thanks to Katja Blankenheim for the help
+        // Thanks to Katja Blankenheim for the help
+        sendNCDPosConfirm(_tg->getSequenceNumber(), _tg->getSourceAddress());
     }
   }
 
@@ -223,69 +241,39 @@ KnxTelegram* KnxTpUart::getReceivedTelegram() {
 
 // Command Write
 
-bool KnxTpUart::groupWriteBool(String Address, bool value) {
-  int valueAsInt = 0;
-  if (value) {
-    valueAsInt = B00000001;
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, valueAsInt);
+bool KnxTpUart::groupWriteBool(String Address, bool aValue) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, (aValue) ? 0x01 : 0x00);
   return sendMessage();
 }
 
-bool KnxTpUart::groupWriteBool(uint16_t aAddress, bool value) {
-  uint8_t valueAsInt = 0;
-  if (value) {
-    valueAsInt = B00000001;
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, valueAsInt);
+bool KnxTpUart::groupWriteBool(uint16_t aAddress, bool aValue) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, (aValue) ? 0x01 : 0x00);
   return sendMessage();
 }
 
-bool KnxTpUart::groupWrite4BitInt(String Address, int8_t value) {
-  int out_value = 0;
-  if (value) {
-    out_value = value & B00001111;
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, out_value);
+bool KnxTpUart::groupWrite4BitInt(String aAddress, uint8_t aValue) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, (aValue & B00001111));
   return sendMessage();
 }
 
-bool KnxTpUart::groupWrite4BitInt(uint16_t aAddress, int8_t value) {
-  int out_value = 0;
-  if (value) {
-    out_value = value & B00001111;
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, out_value);
+bool KnxTpUart::groupWrite4BitInt(uint16_t aAddress, uint8_t aValue) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, (aValue & B00001111));
   return sendMessage();
 }
 
-bool KnxTpUart::groupWrite4BitDim(String Address, bool direction, byte steps) {
-  int value = 0;
-  if (direction || steps) {
-    value = (direction << 3) + (steps & B00000111);
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, value);
+bool KnxTpUart::groupWrite4BitDim(String aAddress, bool aDirection, byte aSteps) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
   return sendMessage();
 }
 
-bool KnxTpUart::groupWrite4BitDim(uint16_t Address, bool direction, byte steps) {
-  int value = 0;
-  if (direction || steps) {
-    value = (direction << 3) + (steps & B00000111);
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, value);
+bool KnxTpUart::groupWrite4BitDim(uint16_t aAddress, bool aDirection, byte aSteps) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
   return sendMessage();
 }
 
 
-bool KnxTpUart::groupWrite1ByteInt(String Address, int8_t value) {
-  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+bool KnxTpUart::groupWrite1ByteInt(String aAddress, int8_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, 0);
   _tg->set1ByteIntValue(value);
   _tg->createChecksum();
   return sendMessage();
@@ -427,68 +415,48 @@ bool KnxTpUart::groupWrite14ByteText(uint16_t Address, String value) {
   return sendMessage();
 }
 
+bool KnxTpUart::groupWriteBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize)
+{
+	if (aSize > 14)
+	{
+		return false;
+	}
+    createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, 0);
+    _tg->setValue(aBuffer, aSize);
+    _tg->createChecksum();
+    return sendMessage();
+}
+
 // Command Answer
 
-bool KnxTpUart::groupAnswerBool(String Address, bool value) {
-  int valueAsInt = 0;
-  if (value) {
-    valueAsInt = B00000001;
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, valueAsInt);
+bool KnxTpUart::groupAnswerBool(String aAddress, bool aValue) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, aValue ? 0x01 : 0x00);
   return sendMessage();
 }
 
-bool KnxTpUart::groupAnswerBool(uint16_t Address, bool value) {
-  int valueAsInt = 0;
-  if (value) {
-    valueAsInt = B00000001;
-  }
-
-  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, valueAsInt);
+bool KnxTpUart::groupAnswerBool(uint16_t aAddress, bool aValue) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, aValue ? 0x01 : 0x00);
   return sendMessage();
 }
 
 
-bool KnxTpUart::groupAnswer4BitInt(String Address, int8_t value) {
-    int out_value = 0;
-    if (value)
-    {
-        out_value = value & B00001111;
-    }
-
-    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, out_value);
+bool KnxTpUart::groupAnswer4BitInt(String aAddress, uint8_t aValue) {
+    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, (aValue & B00001111));
     return sendMessage();
 }
 
-bool KnxTpUart::groupAnswer4BitInt(uint16_t Address, int8_t value) {
-    int out_value = 0;
-    if (value)
-    {
-        out_value = value & B00001111;
-    }
-
-    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, out_value);
+bool KnxTpUart::groupAnswer4BitInt(uint16_t aAddress, uint8_t aValue) {
+    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, (aValue & B00001111));
     return sendMessage();
 }
 
-bool KnxTpUart::groupAnswer4BitDim(String Address, bool direction, byte steps) {
-    int value = 0;
-    if (direction || steps) {
-        value = (direction << 3) + (steps & B00000111);
-    }
-
-    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, value);
+bool KnxTpUart::groupAnswer4BitDim(String aAddress, bool aDirection, byte aSteps) {
+    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
     return sendMessage();
 }
 
-bool KnxTpUart::groupAnswer4BitDim(uint16_t Address, bool direction, byte steps) {
-    int value = 0;
-    if (direction || steps) {
-        value = (direction << 3) + (steps & B00000111);
-    }
-
-    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, value);
+bool KnxTpUart::groupAnswer4BitDim(uint16_t aAddress, bool aDirection, byte aSteps) {
+    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
     return sendMessage();
 }
 
@@ -635,6 +603,19 @@ bool KnxTpUart::groupAnswer14ByteText(uint16_t Address, String value) {
   return sendMessage();
 }
 
+
+bool KnxTpUart::groupAnswerBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize)
+{
+	if (aSize > 14)
+	{
+		return false;
+	}
+    createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, 0);
+    _tg->setValue(aBuffer, aSize);
+    _tg->createChecksum();
+    return sendMessage();
+}
+
 // Command Read
 
 bool KnxTpUart::groupRead(String Address) {
@@ -740,55 +721,69 @@ void KnxTpUart::createKNXMessageFrameIndividual(uint8_t payloadlength, KnxComman
   _tg->createChecksum();
 }
 
-bool KnxTpUart::sendNCDPosConfirm(uint8_t sequenceNo, uint8_t area, uint8_t line, uint8_t member) {
-  _tg_ptp->clear();
-  _tg_ptp->setSourceAddress(mSourceAddress);
-  _tg_ptp->setTargetIndividualAddress(area, line, member);
-  _tg_ptp->setSequenceNumber(sequenceNo);
-  _tg_ptp->setCommunicationType(KNX_COMM_NCD);
-  _tg_ptp->setControlData(KNX_CONTROLDATA_POS_CONFIRM);
-  _tg_ptp->setPayloadLength(1);
-  _tg_ptp->createChecksum();
+
+bool KnxTpUart::sendNCDPosConfirm(uint8_t sequenceNo, uint16_t aAddress) {
+    KnxTelegram _tg_ptp;
+    _tg_ptp.clear();
+    _tg_ptp.setSourceAddress(mSourceAddress);
+    _tg_ptp.setTargetIndividualAddress(aAddress);
+    _tg_ptp.setSequenceNumber(sequenceNo);
+    _tg_ptp.setCommunicationType(KNX_COMM_NCD);
+    _tg_ptp.setControlData(KNX_CONTROLDATA_POS_CONFIRM);
+    _tg_ptp.setPayloadLength(1);
+    _tg_ptp.createChecksum();
 
 
-  int messageSize = _tg_ptp->getTotalLength();
+    int messageSize = _tg_ptp.getTotalLength();
 
-  uint8_t sendbuf[2];
-  for (int i = 0; i < messageSize; i++) {
-    if (i == (messageSize - 1)) {
-      sendbuf[0] = TPUART_DATA_END;
+    uint8_t sendbuf[2];
+    for (int i = 0; i < messageSize; i++)
+    {
+        if (i == (messageSize - 1))
+        {
+            sendbuf[0] = TPUART_DATA_END;
+        }
+        else
+        {
+            sendbuf[0] = TPUART_DATA_START_CONTINUE;
+        }
+
+        sendbuf[0] |= i;
+        sendbuf[1] = _tg_ptp.getBufferByte(i);
+
+        _serialport->write(sendbuf, 2);
     }
-    else {
-      sendbuf[0] = TPUART_DATA_START_CONTINUE;
+
+
+    int confirmation;
+    while (true)
+    {
+        confirmation = serialRead();
+        if (confirmation == B10001011)
+        {
+            return true; // Sent successfully
+        }
+        else if (confirmation == B00001011)
+        {
+            return false;
+        }
+        else if (confirmation == -1)
+        {
+            // Read timeout
+            return false;
+        }
     }
 
-    sendbuf[0] |= i;
-    sendbuf[1] = _tg_ptp->getBufferByte(i);
-
-    _serialport->write(sendbuf, 2);
-  }
-
-
-  int confirmation;
-  while (true) {
-    confirmation = serialRead();
-    if (confirmation == B10001011) {
-      return true; // Sent successfully
-    }
-    else if (confirmation == B00001011) {
-      return false;
-    }
-    else if (confirmation == -1) {
-      // Read timeout
-      return false;
-    }
-  }
-
-  return false;
+    return false;
 }
 
-bool KnxTpUart::sendMessage() {
-  int messageSize = _tg->getTotalLength();
+bool KnxTpUart::sendMessage()
+{
+    return sendTelegram(_tg);
+}
+
+bool KnxTpUart::sendTelegram(KnxTelegram* aTelegram) {
+  int messageSize = aTelegram->getTotalLength();
 
   uint8_t sendbuf[2];
   for (int i = 0; i < messageSize; i++) {
@@ -800,7 +795,7 @@ bool KnxTpUart::sendMessage() {
     }
 
     sendbuf[0] |= i;
-    sendbuf[1] = _tg->getBufferByte(i);
+    sendbuf[1] = aTelegram->getBufferByte(i);
 
     _serialport->write(sendbuf, 2);
   }
@@ -922,4 +917,9 @@ uint16_t KnxTpUart::getSourceAddress(String aAddress)
 	addr = addr << 4;
 	addr |= aAddress.substring(aAddress.lastIndexOf(aDelimiter) + 1, aAddress.length()).toInt();
 	return addr;
+}
+
+void KnxTpUart::setTelegramCheckCallback(KnxTelegramCheckType aCallback)
+{
+	mTelegramCheckCallback = aCallback;
 }

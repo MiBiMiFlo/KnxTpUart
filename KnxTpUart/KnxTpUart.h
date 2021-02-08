@@ -44,6 +44,9 @@
 // Maximum number of group addresses that can be listened on
 #define MAX_LISTEN_GROUP_ADDRESSES 15
 
+// Definition of callback function type to allow application to check if telegram is of interest
+typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
+
 enum KnxTpUartSerialEventType {
   TPUART_RESET_INDICATION,
   KNX_TELEGRAM,
@@ -145,7 +148,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitInt
      */
-    bool groupWrite4BitInt(String aAddress, int8_t aValue);
+    bool groupWrite4BitInt(String aAddress, uint8_t aValue);
 
     /**
      * Send a 4bit value to a group address.
@@ -155,7 +158,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitInt
      */
-    bool groupWrite4BitInt(uint16_t aAddress, int8_t aValue);
+    bool groupWrite4BitInt(uint16_t aAddress, uint8_t aValue);
 
     /**
      * Send a boolean + 3 bit value (DPT-3) to a group address.
@@ -318,6 +321,11 @@ class KnxTpUart {
     bool groupWrite14ByteText(uint16_t aAddress, String aValue);
 
     /**
+     * Send a buffer
+     */
+    bool groupWriteBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize);
+
+    /**
 	 * Send a boolean (1bit) value to a group address.
 	 * This can be used for DPT-1.
 	 * @param aAddress the address to write to.
@@ -345,7 +353,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitInt
      */
-    bool groupAnswer4BitInt(String, int8_t aValue);
+    bool groupAnswer4BitInt(String, uint8_t aValue);
 
     /**
      * Send a 4bit answer to a group address.
@@ -355,7 +363,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitInt
      */
-    bool groupAnswer4BitInt(uint16_t, int8_t aValue);
+    bool groupAnswer4BitInt(uint16_t, uint8_t aValue);
 
     /**
      * Send a boolean + 3 bit answer (DPT-3) to a group address.
@@ -509,6 +517,8 @@ class KnxTpUart {
     bool groupAnswer14ByteText(String aAddress, String aValue);
     bool groupAnswer14ByteText(uint16_t aAddress, String aValue);
 
+    bool groupAnswerBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize);
+
     // Start of definitions for uint16_t address functions
 
     bool groupRead(String aAddress);
@@ -529,7 +539,7 @@ class KnxTpUart {
     bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint16_t aAddress);
 
 
-    void setListenToBroadcasts(bool);
+    void setListenToBroadcasts(bool aValue);
 
     /**
      * Converts a String of the form 1/2/3 into a 2 byte group address.
@@ -545,32 +555,137 @@ class KnxTpUart {
 	 */
     uint16_t getSourceAddress(String aAddress);
 
+    /**
+     * Set a callback function that is called within telegram receive and checks if the telegram is of interest or not.
+     * @param aCallback the callback function that is used to check if a telegram is of interest.
+     */
+    void setTelegramCheckCallback(KnxTelegramCheckType aCallback);
+
+    /**
+     * Send the given telegram to bus.
+     * @param aTelegram the telegram to send.
+     * @return true if send (and receive) was successful, false otherwise.
+     */
+    bool sendTelegram(KnxTelegram* aTelegram);
 
   private:
-    Stream* _serialport;
-    KnxTelegram* _tg;       // for normal communication
-    KnxTelegram* _tg_ptp;   // for PTP sequence confirmation
 
-    // KNX Address is 16bit value
+    /**
+     * The Stream to use for communication with KNX.
+     */
+    Stream* _serialport;
+
+    /**
+     * The KNX telegram buffer used for normal communication.
+     * This is allocated in constructor but never freed!
+     */
+    KnxTelegram* _tg;
+
+    /**
+     * The KNX source address used in default KnxTelegrams.
+     */
     uint16_t mSourceAddress;
 
+#if defined(MAX_LISTEN_GROUP_ADDRESSES)
+
+    /**
+     * The list of group addresses to listen to.
+     */
     uint16_t _listen_group_addresses[MAX_LISTEN_GROUP_ADDRESSES];
+
+    /**
+     * The number of registered group addresses.
+     */
     uint8_t _listen_group_address_count;
+#endif
+
+    /**
+     * A flag to define if broadcast listening is requested.
+     */
     bool _listen_to_broadcasts;
 
-    bool isKNXControlByte(uint8_t);
-    void checkErrors();
-    void printByte(uint8_t);
+    /**
+     * The callback function that allows to
+     */
+    KnxTelegramCheckType mTelegramCheckCallback;
+
+    /**
+     * Internal initialization, called from each constructor.
+     */
+    void init(void);
+
+    bool isKNXControlByte(uint8_t aByte);
+
+    void checkErrors(void);
+
+    /**
+     * Print a single incoming byte into debug output stream.
+     */
+    void printByte(uint8_t aByte);
+
+    /**
+     * Read a telegram from BUS into the internal telegram buffer
+     */
     bool readKNXTelegram();
-    void createKNXMessageFrame(uint8_t, KnxCommandType, String, uint8_t);
-    void createKNXMessageFrameIndividual(uint8_t, KnxCommandType, String, uint8_t);
 
-    void createKNXMessageFrame(uint8_t, KnxCommandType, uint16_t, uint8_t);
-    void createKNXMessageFrameIndividual(uint8_t, KnxCommandType, uint16_t, uint8_t);
+    /**
+     * Initialize the internal telegram buffer for a new message.
+     * This message initializes a telegram send to a group address.
+     * @param aPayloadLength the payload length
+     * @param aCommand the command type
+     * @param aAddress the target group address.
+     * @param aFirstDataByte the first data byte.
+     */
+    void createKNXMessageFrame(uint8_t aPayloadLength, KnxCommandType aCommand, String aAddress, uint8_t aFirstDataByte);
 
+    /**
+	 * Initialize the internal telegram buffer for a new message.
+     * This message initializes a telegram send to a group address.
+	 * @param aPayloadLength the payload length
+	 * @param aCommand the command type
+	 * @param aAddress the target group address.
+	 * @param aFirstDataByte the first data byte.
+	 */
+    void createKNXMessageFrame(uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, uint8_t aFirstDataByte);
+
+    /**
+     * Initialize the internal telegram buffer for a new message.
+     * This message initializes a telegram send to an individual device.
+     * @param aPayloadLength the payload length
+     * @param aCommand the command type
+     * @param aAddress the target individual address.
+     * @param aFirstDataByte the first data byte.
+     */
+    void createKNXMessageFrameIndividual(uint8_t aPayloadLength, KnxCommandType aCommand, String aAddress, uint8_t aFirstDataByte);
+
+    /**
+     * Initialize the internal telegram buffer for a new message.
+     * This message initializes a telegram send to an individual device.
+     * @param aPayloadLength the payload length
+     * @param aCommand the command type
+     * @param aAddress the target individual address.
+     * @param aFirstDataByte the first data byte.
+     */
+    void createKNXMessageFrameIndividual(uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, uint8_t aFirstDataByte);
+
+    /**
+     * Send the a KNX message from internal telegram buffer.
+     */
     bool sendMessage();
-    bool sendNCDPosConfirm(uint8_t aSequenceNo, uint8_t aArea, uint8_t aLine, uint8_t aMember);
+
+    /**
+     * Send a confirm message to the given address.
+     * @param aSequenceNo the sequence no of the telegram to confirm.
+     * @param aAddress the source address of the telegram to confirm.
+     */
+    bool sendNCDPosConfirm(uint8_t aSequenceNo, uint16_t aAddress);
+
+    /**
+     * Read a single byte from serial interface with timeout.
+     */
     int serialRead();
+
+
 };
 
 #endif
