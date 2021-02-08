@@ -11,7 +11,7 @@
 
 KnxTpUart::KnxTpUart(TPUART_SERIAL_CLASS* sport, String address) {
     _serialport = sport;
-    setIndividualAddress(parseAddress(address, '.'));
+    setIndividualAddress(getSourceAddress(address));
 
     _listen_group_address_count = 0;
     _tg = new KnxTelegram();
@@ -285,6 +285,21 @@ bool KnxTpUart::groupWrite1ByteInt(uint16_t Address, int8_t value) {
   return sendMessage();
 }
 
+bool KnxTpUart::groupWrite1ByteUInt(String Address, uint8_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+  _tg->set1ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupWrite1ByteUInt(uint16_t Address, uint8_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+  _tg->set1ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+
 bool KnxTpUart::groupWrite2ByteInt(String Address, int16_t value) {
   createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
   _tg->set2ByteIntValue(value);
@@ -298,6 +313,35 @@ bool KnxTpUart::groupWrite2ByteInt(uint16_t Address, int16_t value) {
   _tg->createChecksum();
   return sendMessage();
 }
+
+bool KnxTpUart::groupWrite2ByteUInt(uint16_t Address, uint16_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+  _tg->set2ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupWrite2ByteUInt(String Address, uint16_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+  _tg->set2ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupWrite4ByteInt(uint16_t Address, int32_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+  _tg->set4ByteIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupWrite4ByteUInt(uint16_t Address, uint32_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
+  _tg->set4ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
 
 bool KnxTpUart::groupWrite2ByteFloat(String Address, float value) {
   createKNXMessageFrame(2, KNX_COMMAND_WRITE, Address, 0);
@@ -449,6 +493,22 @@ bool KnxTpUart::groupAnswer1ByteInt(uint16_t Address, int8_t value) {
   return sendMessage();
 }
 
+
+bool KnxTpUart::groupAnswer1ByteUInt(String Address, uint8_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
+  _tg->set1ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupAnswer1ByteUInt(uint16_t Address, uint8_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
+  _tg->set1ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+
 bool KnxTpUart::groupAnswer2ByteInt(String Address, int16_t value) {
   createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
   _tg->set2ByteIntValue(value);
@@ -459,6 +519,34 @@ bool KnxTpUart::groupAnswer2ByteInt(String Address, int16_t value) {
 bool KnxTpUart::groupAnswer2ByteInt(uint16_t Address, int16_t value) {
   createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
   _tg->set2ByteIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupAnswer2ByteUInt(String Address, uint16_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
+  _tg->set2ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupAnswer2ByteUInt(uint16_t Address, uint16_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
+  _tg->set2ByteUIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupAnswer4ByteInt(uint16_t Address, int32_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
+  _tg->set4ByteIntValue(value);
+  _tg->createChecksum();
+  return sendMessage();
+}
+
+bool KnxTpUart::groupAnswer4ByteUInt(uint16_t Address, uint32_t value) {
+  createKNXMessageFrame(2, KNX_COMMAND_ANSWER, Address, 0);
+  _tg->set4ByteUIntValue(value);
   _tg->createChecksum();
   return sendMessage();
 }
@@ -594,7 +682,7 @@ bool KnxTpUart::individualAnswerAuth(uint8_t accessLevel, uint8_t sequenceNo, ui
 }
 
 void KnxTpUart::createKNXMessageFrame(uint8_t payloadlength, KnxCommandType command, String address, uint8_t firstDataByte) {
-  uint16_t ga = parseAddress(address, '/');
+  uint16_t ga = getGroupAddress(address);
 
   _tg->clear();
   _tg->setSourceAddress(mSourceAddress);
@@ -618,7 +706,7 @@ void KnxTpUart::createKNXMessageFrame(uint8_t payloadlength, KnxCommandType comm
 
 
 void KnxTpUart::createKNXMessageFrameIndividual(uint8_t payloadlength, KnxCommandType command, String address, uint8_t firstDataByte) {
-  uint16_t ia = parseAddress(address, '.');
+  uint16_t ia = getSourceAddress(address);
   _tg->clear();
   _tg->setSourceAddress(mSourceAddress);
   _tg->setTargetIndividualAddress(ia);
@@ -802,22 +890,23 @@ bool KnxTpUart::isListeningToGroupAddress(uint16_t aAddress) {
 
 uint16_t KnxTpUart::getGroupAddress(String aAddress)
 {
-	return parseAddress(aAddress, '/');
+	const char aDelimiter = '/';
+	uint16_t addr = aAddress.substring(0, aAddress.indexOf(aDelimiter)).toInt();
+	addr = addr << 5;
+	addr |= aAddress.substring(aAddress.indexOf(aDelimiter) + 1, aAddress.length()).substring(0, aAddress.substring(aAddress.indexOf(aDelimiter) + 1, aAddress.length()).indexOf(aDelimiter)).toInt();
+	addr = addr << 3;
+	addr |= aAddress.substring(aAddress.lastIndexOf(aDelimiter) + 1, aAddress.length()).toInt();
+	return addr;
 }
 
 
 uint16_t KnxTpUart::getSourceAddress(String aAddress)
 {
-	return parseAddress(aAddress, '.');
+	const char aDelimiter = '.';
+	uint16_t addr = aAddress.substring(0, aAddress.indexOf(aDelimiter)).toInt();
+	addr = addr << 4;
+	addr |= aAddress.substring(aAddress.indexOf(aDelimiter) + 1, aAddress.length()).substring(0, aAddress.substring(aAddress.indexOf(aDelimiter) + 1, aAddress.length()).indexOf(aDelimiter)).toInt();
+	addr = addr << 4;
+	addr |= aAddress.substring(aAddress.lastIndexOf(aDelimiter) + 1, aAddress.length()).toInt();
+	return addr;
 }
-
-uint16_t KnxTpUart::parseAddress(String aAddress, const char aDelimiter)
-{
-    uint16_t addr = aAddress.substring(0, aAddress.indexOf(aDelimiter)).toInt();
-    addr = addr << 4;
-    addr |= aAddress.substring(aAddress.indexOf(aDelimiter) + 1, aAddress.length()).substring(0, aAddress.substring(aAddress.indexOf(aDelimiter) + 1, aAddress.length()).indexOf(aDelimiter)).toInt();
-    addr = addr << 4;
-    addr |= aAddress.substring(aAddress.lastIndexOf(aDelimiter) + 1, aAddress.length()).toInt();
-    return addr;
-}
-
