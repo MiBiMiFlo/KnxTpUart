@@ -38,12 +38,12 @@ void KnxTpUart::setListenToBroadcasts(bool listen) {
 }
 
 void KnxTpUart::uartReset() {
-    byte sendByte = 0x01;
+	uint8_t sendByte = 0x01;
     _serialport->write(sendByte);
 }
 
 void KnxTpUart::uartStateRequest() {
-  byte sendByte = 0x02;
+	uint8_t sendByte = 0x02;
   _serialport->write(sendByte);
 }
 
@@ -261,12 +261,12 @@ bool KnxTpUart::groupWrite4BitInt(uint16_t aAddress, uint8_t aValue) {
   return sendMessage();
 }
 
-bool KnxTpUart::groupWrite4BitDim(String aAddress, bool aDirection, byte aSteps) {
+bool KnxTpUart::groupWrite4BitDim(String aAddress, bool aDirection, uint8_t aSteps) {
   createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
   return sendMessage();
 }
 
-bool KnxTpUart::groupWrite4BitDim(uint16_t aAddress, bool aDirection, byte aSteps) {
+bool KnxTpUart::groupWrite4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps) {
   createKNXMessageFrame(2, KNX_COMMAND_WRITE, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
   return sendMessage();
 }
@@ -415,7 +415,7 @@ bool KnxTpUart::groupWrite14ByteText(uint16_t Address, String value) {
   return sendMessage();
 }
 
-bool KnxTpUart::groupWriteBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize)
+bool KnxTpUart::groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize)
 {
 	if (aSize > 14)
 	{
@@ -450,12 +450,12 @@ bool KnxTpUart::groupAnswer4BitInt(uint16_t aAddress, uint8_t aValue) {
     return sendMessage();
 }
 
-bool KnxTpUart::groupAnswer4BitDim(String aAddress, bool aDirection, byte aSteps) {
+bool KnxTpUart::groupAnswer4BitDim(String aAddress, bool aDirection, uint8_t aSteps) {
     createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
     return sendMessage();
 }
 
-bool KnxTpUart::groupAnswer4BitDim(uint16_t aAddress, bool aDirection, byte aSteps) {
+bool KnxTpUart::groupAnswer4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps) {
     createKNXMessageFrame(2, KNX_COMMAND_ANSWER, aAddress, ((aDirection & 0x01) << 3) | (aSteps & B00000111));
     return sendMessage();
 }
@@ -604,7 +604,7 @@ bool KnxTpUart::groupAnswer14ByteText(uint16_t Address, String value) {
 }
 
 
-bool KnxTpUart::groupAnswerBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize)
+bool KnxTpUart::groupAnswerBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize)
 {
 	if (aSize > 14)
 	{
@@ -734,10 +734,10 @@ bool KnxTpUart::sendNCDPosConfirm(uint8_t sequenceNo, uint16_t aAddress) {
     _tg_ptp.createChecksum();
 
 
-    int messageSize = _tg_ptp.getTotalLength();
+    uint8_t messageSize = _tg_ptp.getTotalLength();
 
     uint8_t sendbuf[2];
-    for (int i = 0; i < messageSize; i++)
+    for (uint8_t i = 0; i < messageSize; i++)
     {
         if (i == (messageSize - 1))
         {
@@ -783,7 +783,7 @@ bool KnxTpUart::sendMessage()
 }
 
 bool KnxTpUart::sendTelegram(KnxTelegram* aTelegram) {
-  int messageSize = aTelegram->getTotalLength();
+	uint8_t messageSize = aTelegram->getTotalLength();
 
   uint8_t sendbuf[2];
   for (int i = 0; i < messageSize; i++) {
@@ -823,13 +823,13 @@ bool KnxTpUart::sendTelegram(KnxTelegram* aTelegram) {
 }
 
 void KnxTpUart::sendAck() {
-  byte sendByte = B00010001;
+	uint8_t sendByte = B00010001;
   _serialport->write(sendByte);
   delay(SERIAL_WRITE_DELAY_MS);
 }
 
 void KnxTpUart::sendNotAddressed() {
-  byte sendByte = B00010000;
+	uint8_t sendByte = B00010000;
   _serialport->write(sendByte);
   delay(SERIAL_WRITE_DELAY_MS);
 }

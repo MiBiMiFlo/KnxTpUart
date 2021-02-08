@@ -168,7 +168,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitDim
      */
-    bool groupWrite4BitDim(String aAddress, bool aDirection, byte aSteps);
+    bool groupWrite4BitDim(String aAddress, bool aDirection, uint8_t aSteps);
 
     /**
      * Send a boolean + 3 bit value (DPT-3) to a group address.
@@ -178,7 +178,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitDim
      */
-    bool groupWrite4BitDim(uint16_t aAddress, bool aDirection, byte aSteps);
+    bool groupWrite4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps);
 
     /**
 	 * Send a 8bit signed integer value to a group address.
@@ -323,7 +323,7 @@ class KnxTpUart {
     /**
      * Send a buffer
      */
-    bool groupWriteBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize);
+    bool groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
 
     /**
 	 * Send a boolean (1bit) value to a group address.
@@ -373,7 +373,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitDim
      */
-    bool groupAnswer4BitDim(String, bool aDirection, byte aSteps);
+    bool groupAnswer4BitDim(String, bool aDirection, uint8_t aSteps);
 
     /**
      * Send a boolean + 3 bit answer (DPT-3) to a group address.
@@ -383,7 +383,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitDim
      */
-    bool groupAnswer4BitDim(uint16_t, bool aDirection, byte aSteps);
+    bool groupAnswer4BitDim(uint16_t, bool aDirection, uint8_t aSteps);
 
     /**
 	 * Send a 8bit signed integer answer to a group address.
@@ -517,7 +517,7 @@ class KnxTpUart {
     bool groupAnswer14ByteText(String aAddress, String aValue);
     bool groupAnswer14ByteText(uint16_t aAddress, String aValue);
 
-    bool groupAnswerBuffer(uint16_t aAddress, byte* aBuffer, uint8_t aSize);
+    bool groupAnswerBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
 
     // Start of definitions for uint16_t address functions
 
