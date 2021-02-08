@@ -111,11 +111,25 @@ class KnxTelegram {
     bool get4BitDirectionValue();
     byte get4BitStepsValue();
 
-    void set1ByteIntValue(int aValue);
-    int get1ByteIntValue();
+    void set1ByteIntValue(int8_t aValue);
+    int8_t get1ByteIntValue();
 
-    void set2ByteIntValue(int aValue);
-    int get2ByteIntValue();
+    void set1ByteUIntValue(uint8_t aValue);
+    uint8_t get1ByteUIntValue();
+
+    void set2ByteIntValue(int16_t aValue);
+    int16_t get2ByteIntValue();
+
+    void set2ByteUIntValue(uint16_t aValue);
+    uint16_t get2ByteUIntValue();
+
+    void set4ByteIntValue(int32_t aValue);
+    int32_t get4ByteIntValue();
+
+    void set4ByteUIntValue(uint32_t aValue);
+    uint32_t get4ByteUIntValue();
+
+
     void set2ByteFloatValue(float aValue);
     float get2ByteFloatValue();
 
