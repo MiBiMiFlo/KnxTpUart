@@ -12,7 +12,7 @@
 
 #include <KnxTpUart.h>
 
-KnxTpUart knx(&Serial, "1.1.199");
+KnxTpUart knx(&Serial, KNX_IA(1,1,199));
 int LED = 13;
 int target_2_6_0;
 int target_5_6_0;
@@ -24,8 +24,9 @@ void setup() {
   Serial.begin(19200, SERIAL_8E1);
   knx.uartReset();
 
-  knx.addListenGroupAddress("2/6/0");
-  knx.addListenGroupAddress("5/6/0");
+  knx.setListenAddressCount(2);
+  knx.addListenGroupAddress(KNX_GA(2,6,0));
+  knx.addListenGroupAddress(KNX_GA(5,6,0));
 
   // Read request to groups address-> all data types
 
@@ -36,8 +37,8 @@ void setup() {
 
   // Read request to group addresses -> possible call to the read request void loop() function
 
-  knx.groupRead("2/6/0");
-  knx.groupRead("5/6/0");
+  knx.groupRead(KNX_GA(2,6,0));
+  knx.groupRead(KNX_GA(5,6,0));
 }
 
 void loop() {
@@ -57,10 +58,7 @@ void serialEvent() {
 
     // Telegram evaluation on KNX (at reception always necessary)
 
-    String target =
-      String(0 + telegram->getTargetMainGroup())   + "/" +
-      String(0 + telegram->getTargetMiddleGroup()) + "/" +
-      String(0 + telegram->getTargetSubGroup());
+    uint16_t target = telegram->getTargetGroupAddress();
 
     // Evaluation of group address of the received telegram and caching in variable "target"
 
@@ -69,7 +67,7 @@ void serialEvent() {
       // Evaluation of read request in serialEvent() with data types
       // Evaluation of the received KNX telegram with response to read request (flag) -> action
 
-      if (target == "2/6/0") {
+      if (target == KNX_GA(2,6,0)) {
         target_2_6_0 = telegram->getBool();
 
         // Storage of the contents in variable "target_2_6_0" of the response to the read request of the group address "2/6/0"
@@ -83,7 +81,7 @@ void serialEvent() {
 
         // Evaluation of the content and output of the content of the group address "2/6/0" to PIN 13 of the ARDUINO UNO
       }
-      else if (target == "5/6/0") {
+      else if (target == KNX_GA(5,6,0)) {
         target_5_6_0 = telegram->get1ByteIntValue();
 
         // Storage of the contents in a variable "target_5_6_0" of the response to the read request of the group address "5/6/0" for further processing

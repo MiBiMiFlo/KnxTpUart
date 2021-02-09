@@ -6,7 +6,7 @@
 // Modified: Mag Gyver (Since 2016)
 // Modified: Rouven Raudzus (Since 2017)
 
-// Last modified: 06.06.2017
+// Last modified: 2021-02-09 by MiBiMiFlo
 
 #include "KnxTelegram.h"
 
@@ -26,12 +26,12 @@ void KnxTelegram::clear() {
   buffer[5] = B11100001;
 }
 
-int KnxTelegram::getBufferByte(int index) {
+uint8_t KnxTelegram::getBufferByte(uint8_t index) {
   return buffer[index];
 }
 
-void KnxTelegram::setBufferByte(int index, int content) {
-  buffer[index] = content;
+void KnxTelegram::setBufferByte(uint8_t index, uint8_t aContent) {
+  buffer[index] = aContent;
 }
 
 bool KnxTelegram::isRepeated() {
@@ -63,73 +63,123 @@ KnxPriorityType KnxTelegram::getPriority() {
   return (KnxPriorityType) ((buffer[0] & B00001100) >> 2);
 }
 
-void KnxTelegram::setSourceAddress(int area, int line, int member) {
-  buffer[1] = (area << 4) | line;	// Source Address
-  buffer[2] = member; // Source Address
+uint16_t KnxTelegram::getSourceAddress()
+{
+	return (((uint16_t)buffer[1]) << 8) | buffer[2];
 }
 
-int KnxTelegram::getSourceArea() {
+void KnxTelegram::setSourceAddress(uint8_t area, uint8_t line, uint8_t member) {
+  buffer[1] = ((area & 0x0F) << 4) | (line & 0x0F);	// Source Address
+  buffer[2] = (member & 0xFF); // Source Address
+}
+
+void KnxTelegram::setSourceAddress(uint16_t aAddress) {
+  buffer[1] = (aAddress >> 8) & 0xFF;
+  buffer[2] = aAddress & 0x00FF;
+}
+
+uint8_t KnxTelegram::getSourceArea() {
   return (buffer[1] >> 4);
 }
 
-int KnxTelegram::getSourceLine() {
+uint8_t KnxTelegram::getSourceLine() {
   return (buffer[1] & B00001111);
 }
 
-int KnxTelegram::getSourceMember() {
-  return buffer[2];
+uint8_t KnxTelegram::getSourceMember() {
+  return buffer[2] & 0xFF;
 }
 
-void KnxTelegram::setTargetGroupAddress(int main, int middle, int sub) {
-  buffer[3] = (main << 3) | middle;
-  buffer[4] = sub;
+void KnxTelegram::setTargetAddress(uint16_t aAddress, bool aIsGroup)
+{
+    buffer[3] = (aAddress >> 8) & 0xFF;
+    buffer[4] = (aAddress & 0xFF);
+    if (aIsGroup)
+    {
+    	buffer[5] = buffer[5] | B10000000;
+    }
+    else
+    {
+    	buffer[5] = buffer[5] & B01111111;
+    }
+}
+
+void KnxTelegram::setTargetGroupAddress(uint8_t main, uint8_t middle, uint8_t sub) {
+  buffer[3] = ((main & 0x1F) << 3) | (middle & 0x07);
+  buffer[4] = (sub & 0xFF);
   buffer[5] = buffer[5] | B10000000;
 }
 
-void KnxTelegram::setTargetIndividualAddress(int area, int line, int member) {
-  buffer[3] = (area << 4) | line;
-  buffer[4] = member;
+void KnxTelegram::setTargetIndividualAddress(uint8_t area, uint8_t line, uint8_t member) {
+  buffer[3] = ((area & 0x0F) << 4) | (line & 0x0F);
+  buffer[4] = (member & 0xFF);
   buffer[5] = buffer[5] & B01111111;
 }
+
+
+void KnxTelegram::setTargetGroupAddress(uint16_t aAddress) {
+    buffer[3] = (aAddress >> 8) & 0xFF;
+    buffer[4] = (aAddress & 0xFF);
+    buffer[5] = buffer[5] | B10000000;
+}
+
+void KnxTelegram::setTargetIndividualAddress(uint16_t aAddress) {
+    buffer[3] = (aAddress >> 8) & 0xFF;
+    buffer[4] = (aAddress & 0xFF);
+    buffer[5] = buffer[5] & B01111111;
+}
+
 
 bool KnxTelegram::isTargetGroup() {
   return buffer[5] & B10000000;
 }
 
-int KnxTelegram::getTargetMainGroup() {
-  return ((buffer[3] & B01111000) >> 3);
+uint8_t KnxTelegram::getTargetMainGroup() {
+  return ((buffer[3] & B11111000) >> 3);
 }
 
-int KnxTelegram::getTargetMiddleGroup() {
+uint8_t KnxTelegram::getTargetMiddleGroup() {
   return (buffer[3] & B00000111);
 }
 
-int KnxTelegram::getTargetSubGroup() {
+uint8_t KnxTelegram::getTargetSubGroup() {
   return buffer[4];
 }
 
-int KnxTelegram::getTargetArea() {
+uint16_t KnxTelegram::getTargetGroupAddress()
+{
+	return (((uint16_t)buffer[3]) << 8) | buffer[4];
+}
+
+uint8_t KnxTelegram::getTargetArea() {
   return ((buffer[3] & B11110000) >> 4);
 }
 
-int KnxTelegram::getTargetLine() {
+uint8_t KnxTelegram::getTargetLine() {
   return (buffer[3] & B00001111);
 }
 
-int KnxTelegram::getTargetMember() {
+uint8_t KnxTelegram::getTargetMember() {
   return buffer[4];
 }
 
-void KnxTelegram::setRoutingCounter(int counter) {
+uint16_t KnxTelegram::getTargetAddress()
+{
+	uint16_t res = (buffer[3] & 0xFF);
+	res = res << 8 | (buffer[4] & 0xFF);
+	return res;
+}
+
+void KnxTelegram::setRoutingCounter(uint8_t counter) {
   buffer[5] = buffer[5] & B10000000;
   buffer[5] = buffer[5] | (counter << 4);
 }
 
-int KnxTelegram::getRoutingCounter() {
+uint8_t KnxTelegram::getRoutingCounter() {
   return ((buffer[5] & B01110000) >> 4);
 }
 
-void KnxTelegram::setPayloadLength(int length) {
+void KnxTelegram::setPayloadLength(uint8_t length) {
   buffer[5] = buffer[5] & B11110000;
   buffer[5] = buffer[5] | (length - 1);
 }
@@ -169,28 +219,28 @@ void KnxTelegram::setCommunicationType(KnxCommunicationType type) {
   buffer[6] = buffer[6] | (type << 6);
 }
 
-int KnxTelegram::getSequenceNumber() {
+uint8_t KnxTelegram::getSequenceNumber() {
   return (buffer[6] & B00111100) >> 2;
 }
 
-void KnxTelegram::setSequenceNumber(int number) {
+void KnxTelegram::setSequenceNumber(uint8_t number) {
   buffer[6] = buffer[6] & B11000011;
   buffer[6] = buffer[6] | (number << 2);
 }
 
 void KnxTelegram::createChecksum() {
-  int checksumPos = getPayloadLength() + KNX_TELEGRAM_HEADER_SIZE;
+	uint8_t checksumPos = getPayloadLength() + KNX_TELEGRAM_HEADER_SIZE;
   buffer[checksumPos] = calculateChecksum();
 }
 
-int KnxTelegram::getChecksum() {
-  int checksumPos = getPayloadLength() + KNX_TELEGRAM_HEADER_SIZE;
+uint8_t KnxTelegram::getChecksum() {
+  uint8_t checksumPos = getPayloadLength() + KNX_TELEGRAM_HEADER_SIZE;
   return buffer[checksumPos];
 }
 
 bool KnxTelegram::verifyChecksum() {
-  int calculatedChecksum = calculateChecksum();
-  return (getChecksum() == calculatedChecksum);
+	uint8_t calculatedChecksum = calculateChecksum();
+	return (getChecksum() == calculatedChecksum);
 }
 
 void KnxTelegram::print(TPUART_SERIAL_CLASS* serial) {
@@ -256,27 +306,27 @@ void KnxTelegram::print(TPUART_SERIAL_CLASS* serial) {
 #endif
 }
 
-int KnxTelegram::calculateChecksum() {
-  int bcc = 0xFF;
-  int size = getPayloadLength() + KNX_TELEGRAM_HEADER_SIZE;
+uint8_t KnxTelegram::calculateChecksum() {
+	uint8_t bcc = 0xFF;
+	uint8_t size = getPayloadLength() + KNX_TELEGRAM_HEADER_SIZE;
 
-  for (int i = 0; i < size; i++) {
+  for (uint8_t i = 0; i < size; i++) {
     bcc ^= buffer[i];
   }
 
   return bcc;
 }
 
-int KnxTelegram::getTotalLength() {
+uint8_t KnxTelegram::getTotalLength() {
   return KNX_TELEGRAM_HEADER_SIZE + getPayloadLength() + 1;
 }
 
-void KnxTelegram::setFirstDataByte(int data) {
+void KnxTelegram::setFirstDataByte(uint8_t aData) {
   buffer[7] = buffer[7] & B11000000;
-  buffer[7] = buffer[7] | data;
+  buffer[7] = buffer[7] | aData;
 }
 
-int KnxTelegram::getFirstDataByte() {
+uint8_t KnxTelegram::getFirstDataByte() {
   return (buffer[7] & B00111111);
 }
 
@@ -289,7 +339,7 @@ bool KnxTelegram::getBool() {
   return (getFirstDataByte() & B00000001);
 }
 
-int KnxTelegram::get4BitIntValue() {
+uint8_t KnxTelegram::get4BitIntValue() {
   if (getPayloadLength() != 2) {
     // Wrong payload length
     return 0;
@@ -307,7 +357,7 @@ bool KnxTelegram::get4BitDirectionValue() {
   return ((getFirstDataByte() & B00001000)) >> 3;
 }
 
-byte KnxTelegram::get4BitStepsValue() {
+uint8_t KnxTelegram::get4BitStepsValue() {
   if (getPayloadLength() != 2) {
     // Wrong payload length
     return 0;
@@ -316,36 +366,120 @@ byte KnxTelegram::get4BitStepsValue() {
   return (getFirstDataByte() & B00000111);
 }
 
-void KnxTelegram::set1ByteIntValue(int value) {
+void KnxTelegram::set1ByteIntValue(int8_t value) {
   setPayloadLength(3);
-  buffer[8] = value;
+  buffer[8] = (value & 0xFF);
 }
 
-int KnxTelegram::get1ByteIntValue() {
+void KnxTelegram::set1ByteUIntValue(uint8_t value) {
+  setPayloadLength(3);
+  buffer[8] = (value & 0xFF);
+}
+
+int8_t KnxTelegram::get1ByteIntValue() {
   if (getPayloadLength() != 3) {
     // Wrong payload length
     return 0;
   }
 
-  return (buffer[8]);
+  return (int8_t) (buffer[8] & 0xFF);
 }
 
-void KnxTelegram::set2ByteIntValue(int value) {
+uint8_t KnxTelegram::get1ByteUIntValue() {
+  if (getPayloadLength() != 3) {
+    // Wrong payload length
+    return 0;
+  }
+
+  return (uint8_t) (buffer[8] & 0xFF);
+}
+
+void KnxTelegram::set2ByteIntValue(int16_t value) {
   setPayloadLength(4);
 
-  buffer[8] = byte(value >> 8);
-  buffer[9] = byte(value & 0x00FF);
+  buffer[8] = (value >> 8) & 0xFF;
+  buffer[9] = value & 0xFF;
 }
 
-int KnxTelegram::get2ByteIntValue() {
+int16_t KnxTelegram::get2ByteIntValue() {
   if (getPayloadLength() != 4) {
     // Wrong payload length
     return 0;
   }
-  int value = int(buffer[8] << 8) + int(buffer[9]);
+  int16_t value = int(buffer[8] << 8) + int(buffer[9]);
 
   return (value);
 }
+
+
+void KnxTelegram::set2ByteUIntValue(uint16_t value) {
+  setPayloadLength(4);
+
+  buffer[8] = (value >> 8) & 0xFF;
+  buffer[9] = value & 0xFF;
+}
+
+uint16_t KnxTelegram::get2ByteUIntValue() {
+  if (getPayloadLength() != 4) {
+    // Wrong payload length
+    return 0;
+  }
+  uint16_t value = (((uint16_t)buffer[8]) << 8) + buffer[9];
+
+  return (value);
+}
+
+
+
+void KnxTelegram::set4ByteIntValue(int32_t value) {
+  setPayloadLength(6);
+
+  buffer[8]  = (value  >> 24) & 0xFF;
+  buffer[9]  = (value  >> 16) & 0xFF;
+  buffer[10] = (value  >> 8) & 0xFF;
+  buffer[11] = (value & 0xFF);
+}
+
+
+int32_t KnxTelegram::get4ByteIntValue() {
+  if (getPayloadLength() != 6) {
+    // Wrong payload length
+    return 0;
+  }
+
+  int32_t value = buffer[8];
+  value = (value << 8) + buffer[9];
+  value = (value << 8) + buffer[10];
+  value = (value << 8) + buffer[11];
+
+  return (value);
+}
+
+
+void KnxTelegram::set4ByteUIntValue(uint32_t value) {
+  setPayloadLength(6);
+
+  buffer[8]  = (value  >> 24) & 0xFF;
+  buffer[9]  = (value  >> 16) & 0xFF;
+  buffer[10] = (value >> 8) & 0xFF;
+  buffer[11] = (value & 0xFF);
+}
+
+
+uint32_t KnxTelegram::get4ByteUIntValue() {
+  if (getPayloadLength() != 6) {
+    // Wrong payload length
+    return 0;
+  }
+  //TODO: check if this is correct
+  uint32_t value = buffer[8];
+  value = value << 8 + buffer[9];
+  value = value << 8 + buffer[10];
+  value = value << 8 + buffer[11];
+
+  return (value);
+}
+
 
 void KnxTelegram::set2ByteFloatValue(float value) {
   setPayloadLength(4);
@@ -354,11 +488,12 @@ void KnxTelegram::set2ByteFloatValue(float value) {
   int exponent = 0;
   for (; v < -2048.0f; v /= 2) exponent++;
   for (; v > 2047.0f; v /= 2) exponent++;
-  long m = round(v) & 0x7FF;
+//  long m = round(v) & 0x7FF;
+  long m = lround(v) & 0x7FF;
   short msb = (short) (exponent << 3 | m >> 8);
   if (value < 0.0f) msb |= 0x80;
   buffer[8] = msb;
-  buffer[9] = (byte)m;
+  buffer[9] = (uint8_t)m;
 }
 
 float KnxTelegram::get2ByteFloatValue() {
@@ -377,7 +512,7 @@ float KnxTelegram::get2ByteFloatValue() {
   return (mantissa * 0.01) * pow(2.0, exponent);
 }
 
-void KnxTelegram::set3ByteTime(int weekday, int hour, int minute, int second) {
+void KnxTelegram::set3ByteTime(uint8_t weekday, uint8_t hour, uint8_t minute, uint8_t second) {
   setPayloadLength(5);
 
   // Move the weekday by 5 bits to the left
@@ -393,7 +528,7 @@ void KnxTelegram::set3ByteTime(int weekday, int hour, int minute, int second) {
   buffer[10] = second & B00111111;
 }
 
-int KnxTelegram::get3ByteWeekdayValue() {
+uint8_t KnxTelegram::get3ByteWeekdayValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -401,7 +536,7 @@ int KnxTelegram::get3ByteWeekdayValue() {
   return (buffer[8] & B11100000) >> 5;
 }
 
-int KnxTelegram::get3ByteHourValue() {
+uint8_t KnxTelegram::get3ByteHourValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -409,7 +544,7 @@ int KnxTelegram::get3ByteHourValue() {
   return (buffer[8] & B00011111);
 }
 
-int KnxTelegram::get3ByteMinuteValue() {
+uint8_t KnxTelegram::get3ByteMinuteValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -417,7 +552,7 @@ int KnxTelegram::get3ByteMinuteValue() {
   return (buffer[9] & B00111111);
 }
 
-int KnxTelegram::get3ByteSecondValue() {
+uint8_t KnxTelegram::get3ByteSecondValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -425,7 +560,7 @@ int KnxTelegram::get3ByteSecondValue() {
   return (buffer[10] & B00111111);
 }
 
-void KnxTelegram::set3ByteDate(int day, int month, int year) {
+void KnxTelegram::set3ByteDate(uint8_t day, uint8_t month, uint8_t year) {
   setPayloadLength(5);
 
   // Buffer [8] bit 5-7 empty, bit 0-4 for month days
@@ -438,7 +573,7 @@ void KnxTelegram::set3ByteDate(int day, int month, int year) {
   buffer[10] = year;
 }
 
-int KnxTelegram::get3ByteDayValue() {
+uint8_t KnxTelegram::get3ByteDayValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -446,7 +581,7 @@ int KnxTelegram::get3ByteDayValue() {
   return (buffer[8] & B00011111);
 }
 
-int KnxTelegram::get3ByteMonthValue() {
+uint8_t KnxTelegram::get3ByteMonthValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -454,7 +589,7 @@ int KnxTelegram::get3ByteMonthValue() {
   return (buffer[9] & B00001111);
 }
 
-int KnxTelegram::get3ByteYearValue() {
+uint8_t KnxTelegram::get3ByteYearValue() {
   if (getPayloadLength() != 5) {
     // Wrong payload length
     return 0;
@@ -465,7 +600,7 @@ int KnxTelegram::get3ByteYearValue() {
 void KnxTelegram::set4ByteFloatValue(float value) {
   setPayloadLength(6);
 
-  byte b[4];
+  uint8_t b[4];
   float *f = (float*)(void*) & (b[0]);
   *f = value;
 
@@ -480,7 +615,7 @@ float KnxTelegram::get4ByteFloatValue() {
     // Wrong payload length
     return 0;
   }
-  byte b[4];
+  uint8_t b[4];
   b[0] = buffer[8 + 3];
   b[1] = buffer[8 + 2];
   b[2] = buffer[8 + 1];
@@ -491,52 +626,56 @@ float KnxTelegram::get4ByteFloatValue() {
 }
 
 void KnxTelegram::set14ByteValue(String value) {
-  // Define
-  char _load[15];
+    // Define
+    char _load[15];
 
-  // Empty/Initialize with space
-  for (int i = 0; i < 14; ++i)
-  {
-    _load[i] = 0;
-  }
-  setPayloadLength(16);
-  // Make out of value the Chararray
-  value.toCharArray(_load, 15); // Must be 15 - because it completes with 0
-  buffer[8 + 0] = _load [0];
-  buffer[8 + 1] = _load [1];
-  buffer[8 + 2] = _load [2];
-  buffer[8 + 3] = _load [3];
-  buffer[8 + 4] = _load [4];
-  buffer[8 + 5] = _load [5];
-  buffer[8 + 6] = _load [6];
-  buffer[8 + 7] = _load [7];
-  buffer[8 + 8] = _load [8];
-  buffer[8 + 9] = _load [9];
-  buffer[8 + 10] = _load [10];
-  buffer[8 + 11] = _load [11];
-  buffer[8 + 12] = _load [12];
-  buffer[8 + 13] = _load [13];
+    // Empty/Initialize with space
+    for (int i = 0; i < 14; ++i)
+    {
+        _load[i] = 0;
+    }
+
+    setPayloadLength(16);
+    // Make out of value the Chararray
+    value.toCharArray(_load, 15); // Must be 15 - because it completes with 0
+    for (uint8_t i = 0; i < 14; i++)
+    {
+        buffer[8 + i]  = _load[i];
+    }
 }
 
 String KnxTelegram::get14ByteValue() {
-  if (getPayloadLength() != 16) {
-    // Wrong payload length
-    return "";
-  }
-  char _load[15];
-  _load[0] = buffer[8 + 0];
-  _load[1] = buffer[8 + 1];
-  _load[2] = buffer[8 + 2];
-  _load[3] = buffer[8 + 3];
-  _load[4] = buffer[8 + 4];
-  _load[5] = buffer[8 + 5];
-  _load[6] = buffer[8 + 6];
-  _load[7] = buffer[8 + 7];
-  _load[8] = buffer[8 + 8];
-  _load[9] = buffer[8 + 9];
-  _load[10] = buffer[8 + 10];
-  _load[11] = buffer[8 + 11];
-  _load[12] = buffer[8 + 12];
-  _load[13] = buffer[8 + 13];
-  return (_load);
+    if (getPayloadLength() != 16) {
+        // Wrong payload length
+        return "";
+    }
+    char _load[15];
+    for (uint8_t i = 0; i < 14; i++)
+    {
+        _load[i] = buffer[8 + i];
+    }
+    return (_load);
+}
+
+
+uint8_t KnxTelegram::getValue(uint8_t* aBuffer, uint8_t aCount)
+{
+	if (getPayloadLength() < aCount)
+	{
+		aCount = getPayloadLength();
+	}
+	memcpy(aBuffer, buffer+8, aCount);
+	return aCount;
+}
+
+void KnxTelegram::setValue(uint8_t* aBuffer, uint8_t aSize)
+{
+	if (aSize > 14)
+	{
+		// ignore
+		return;
+	}
+
+	setPayloadLength(aSize+2);
+	memcpy(buffer+8, aBuffer, aSize);
 }
