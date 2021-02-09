@@ -62,7 +62,7 @@ KnxTpUartSerialEventType KnxTpUart::serialEvent() {
     int incomingByte = _serialport->peek();
     printByte(incomingByte);
 
-    if (isKNXControlByte(incomingByte)) {
+    if (isKNXControlByte(incomingByte & 0xFF)) {
       bool interested = readKNXTelegram();
       if (interested) {
 #if defined(TPUART_DEBUG)
@@ -166,7 +166,7 @@ void KnxTpUart::printByte(uint8_t aByte) {
 bool KnxTpUart::readKNXTelegram() {
   // Receive header
   for (int i = 0; i < 6; i++) {
-    _tg->setBufferByte(i, serialRead());
+    _tg->setBufferByte(i, serialRead() & 0xFF);
   }
 
 #if defined(TPUART_DEBUG)
@@ -175,12 +175,12 @@ bool KnxTpUart::readKNXTelegram() {
 #endif
   int bufpos = 6;
   for (int i = 0; i < _tg->getPayloadLength(); i++) {
-    _tg->setBufferByte(bufpos, serialRead());
+    _tg->setBufferByte(bufpos, serialRead() & 0xFF);
     bufpos++;
   }
 
   // Checksum
-  _tg->setBufferByte(bufpos, serialRead());
+  _tg->setBufferByte(bufpos, serialRead() & 0xFF);
 
 #if defined(TPUART_DEBUG)
   // Print the received telegram
