@@ -626,54 +626,35 @@ float KnxTelegram::get4ByteFloatValue() {
 }
 
 void KnxTelegram::set14ByteValue(String value) {
-  // Define
-  char _load[15];
+    // Define
+    char _load[15];
 
-  // Empty/Initialize with space
-  for (int i = 0; i < 14; ++i)
-  {
-    _load[i] = 0;
-  }
-  setPayloadLength(16);
-  // Make out of value the Chararray
-  value.toCharArray(_load, 15); // Must be 15 - because it completes with 0
-  buffer[8 + 0] = _load [0];
-  buffer[8 + 1] = _load [1];
-  buffer[8 + 2] = _load [2];
-  buffer[8 + 3] = _load [3];
-  buffer[8 + 4] = _load [4];
-  buffer[8 + 5] = _load [5];
-  buffer[8 + 6] = _load [6];
-  buffer[8 + 7] = _load [7];
-  buffer[8 + 8] = _load [8];
-  buffer[8 + 9] = _load [9];
-  buffer[8 + 10] = _load [10];
-  buffer[8 + 11] = _load [11];
-  buffer[8 + 12] = _load [12];
-  buffer[8 + 13] = _load [13];
+    // Empty/Initialize with space
+    for (int i = 0; i < 14; ++i)
+    {
+        _load[i] = 0;
+    }
+
+    setPayloadLength(16);
+    // Make out of value the Chararray
+    value.toCharArray(_load, 15); // Must be 15 - because it completes with 0
+    for (uint8_t i = 0; i < 14; i++)
+    {
+        buffer[8 + i]  = _load[i];
+    }
 }
 
 String KnxTelegram::get14ByteValue() {
-  if (getPayloadLength() != 16) {
-    // Wrong payload length
-    return "";
-  }
-  char _load[15];
-  _load[0] = buffer[8 + 0];
-  _load[1] = buffer[8 + 1];
-  _load[2] = buffer[8 + 2];
-  _load[3] = buffer[8 + 3];
-  _load[4] = buffer[8 + 4];
-  _load[5] = buffer[8 + 5];
-  _load[6] = buffer[8 + 6];
-  _load[7] = buffer[8 + 7];
-  _load[8] = buffer[8 + 8];
-  _load[9] = buffer[8 + 9];
-  _load[10] = buffer[8 + 10];
-  _load[11] = buffer[8 + 11];
-  _load[12] = buffer[8 + 12];
-  _load[13] = buffer[8 + 13];
-  return (_load);
+    if (getPayloadLength() != 16) {
+        // Wrong payload length
+        return "";
+    }
+    char _load[15];
+    for (uint8_t i = 0; i < 14; i++)
+    {
+        _load[i] = buffer[8 + i];
+    }
+    return (_load);
 }
 
 
