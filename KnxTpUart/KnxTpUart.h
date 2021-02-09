@@ -19,6 +19,7 @@
 
 // Services to TPUART
 #define TPUART_DATA_START_CONTINUE B10000000
+
 #define TPUART_DATA_END B01000000
 
 // Uncomment the following line to enable debugging
@@ -36,8 +37,8 @@
 // Change only if you know what you're doing
 #define SERIAL_READ_TIMEOUT_MS 10
 
-// Maximum number of group addresses that can be listened on
-#define MAX_LISTEN_GROUP_ADDRESSES 15
+// If KNX_SUPPORT_LISTEN_GAS is defined listening GAs can be added.
+//#define KNX_SUPPORT_LISTEN_GAS
 
 // Definition of callback function type to allow application to check if telegram is of interest
 typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
@@ -519,12 +520,6 @@ class KnxTpUart {
     bool groupRead(String aAddress);
     bool groupRead(uint16_t aAddress);
 
-    void addListenGroupAddress(String aAddress);
-    void addListenGroupAddress(uint16_t aAddress);
-
-    bool isListeningToGroupAddress(uint8_t aMain, uint8_t aMiddle, uint8_t aSub);
-    bool isListeningToGroupAddress(uint16_t aAddress);
-
     bool individualAnswerAddress();
 
     bool individualAnswerMaskVersion(uint8_t aArea, uint8_t aLine, uint8_t aMember);
@@ -563,6 +558,26 @@ class KnxTpUart {
      */
     bool sendTelegram(KnxTelegram* aTelegram);
 
+#ifdef KNX_SUPPORT_LISTEN_GAS
+
+    bool addListenGroupAddress(String aAddress);
+    bool addListenGroupAddress(uint16_t aAddress);
+
+    bool isListeningToGroupAddress(uint8_t aMain, uint8_t aMiddle, uint8_t aSub);
+    bool isListeningToGroupAddress(uint16_t aAddress);
+
+
+    /**
+     * Set the maximum number of listening group addresses.
+     * This need to be called before a listening GA is added by calling addListenGroupAddress(aAddress).
+     * This will clear all previously assigned addresses.
+     * This method will reserve 2 byte RAM for each address.
+     * @param aCount the maximum number of addresses to be allowed.
+     */
+    bool setListenAddressCount(uint8_t aCount);
+
+#endif
+
   private:
 
     /**
@@ -581,17 +596,18 @@ class KnxTpUart {
      */
     uint16_t mSourceAddress;
 
-#if defined(MAX_LISTEN_GROUP_ADDRESSES)
-
+#ifdef KNX_SUPPORT_LISTEN_GAS
     /**
      * The list of group addresses to listen to.
      */
-    uint16_t _listen_group_addresses[MAX_LISTEN_GROUP_ADDRESSES];
+    uint16_t *mListenGAs;
 
     /**
      * The number of registered group addresses.
      */
-    uint8_t _listen_group_address_count;
+    uint8_t mListenGAsCount;
+
+    uint8_t mListenGAsMax;
 #endif
 
     /**

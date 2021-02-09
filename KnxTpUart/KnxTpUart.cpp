@@ -24,11 +24,13 @@ KnxTpUart::KnxTpUart(TPUART_SERIAL_CLASS* sport, uint16_t aAddress) {
 void KnxTpUart::init(void)
 {
     _tg = new KnxTelegram();
-    _listen_to_broadcasts = false;
+    _listen_to_broadcasts  = false;
     mTelegramCheckCallback = NULL;
 
-#if defined(MAX_LISTEN_GROUP_ADDRESSES)
-    _listen_group_address_count = 0;
+#ifdef KNX_SUPPORT_LISTEN_GAS
+    mListenGAs      = NULL;
+    mListenGAsCount = 0;
+    mListenGAsMax   = 0;
 #endif
 
 }
@@ -193,11 +195,13 @@ bool KnxTpUart::readKNXTelegram() {
 	  interested |=mTelegramCheckCallback(_tg);
   }
 
+#ifdef KNX_SUPPORT_LISTEN_GAS
   if (!interested)
   {
 	  // Verify if we are interested in this message - GroupAddress
 	  interested = _tg->isTargetGroup() && isListeningToGroupAddress(_tg->getTargetGroupAddress());
   }
+#endif
 
   // Physical address
   interested |= ((!_tg->isTargetGroup()) && _tg->getTargetAddress() == mSourceAddress);
@@ -859,42 +863,6 @@ int KnxTpUart::serialRead() {
   return inByte;
 }
 
-void KnxTpUart::addListenGroupAddress(String address) {
-  int area = address.substring(0, address.indexOf('/')).toInt();
-  int line = address.substring(address.indexOf('/') + 1, address.length()).substring(0, address.substring(address.indexOf('/') + 1, address.length()).indexOf('/')).toInt();
-  int member = address.substring(address.lastIndexOf('/') + 1, address.length()).toInt();
-  uint16_t ga = ((area & 0xF0)<<12) | ((line & 0x0F) <<8) | (member & 0xFF);
-  addListenGroupAddress(ga);
-}
-
-void KnxTpUart::addListenGroupAddress(uint16_t address) {
-  if (_listen_group_address_count >= MAX_LISTEN_GROUP_ADDRESSES) {
-#if defined(TPUART_DEBUG)
-    TPUART_DEBUG_PORT.println("Already listening to MAX_LISTEN_GROUP_ADDRESSES, cannot listen to another");
-#endif
-    return;
-  }
-
-  _listen_group_addresses[_listen_group_address_count] = address;
-
-  _listen_group_address_count++;
-}
-
-bool KnxTpUart::isListeningToGroupAddress(uint8_t main, uint8_t middle, uint8_t sub) {
-    uint16_t ga = ((main & 0xF0)<<12) | ((middle & 0x0F) <<8) | (sub & 0xFF);
-    return isListeningToGroupAddress(ga);
-}
-
-bool KnxTpUart::isListeningToGroupAddress(uint16_t aAddress) {
-    for (int i = 0; i < _listen_group_address_count; i++)
-    {
-        if (_listen_group_addresses[i] == aAddress)
-        {
-        	return true;
-        }
-    }
-    return false;
-}
 
 uint16_t KnxTpUart::getGroupAddress(String aAddress)
 {
@@ -923,3 +891,58 @@ void KnxTpUart::setTelegramCheckCallback(KnxTelegramCheckType aCallback)
 {
 	mTelegramCheckCallback = aCallback;
 }
+
+#ifdef KNX_SUPPORT_LISTEN_GAS
+
+bool KnxTpUart::setListenAddressCount(uint8_t aCount)
+{
+	if (mListenGAs != NULL)
+	{
+		// free the previously allocated buffer
+		free(mListenGAs);
+		mListenGAs=NULL;
+	}
+
+	// allocate new buffer (2 bytes per address)
+	mListenGAs      = (uint16_t *)malloc(2*aCount);
+	mListenGAsCount = 0;
+	mListenGAsMax   = aCount;
+}
+
+
+bool KnxTpUart::addListenGroupAddress(String address) {
+	return addListenGroupAddress(getGroupAddress(address));
+}
+
+bool KnxTpUart::addListenGroupAddress(uint16_t aAddress)
+{
+    if (mListenGAsCount >= mListenGAsMax)
+    {
+#if defined(TPUART_DEBUG)
+    TPUART_DEBUG_PORT.println("Maximum number of listening addresses already added.");
+#endif
+    return false;
+    }
+    mListenGAs[mListenGAsCount] = aAddress;
+    mListenGAsCount++;
+    return true;
+}
+
+bool KnxTpUart::isListeningToGroupAddress(uint8_t main, uint8_t middle, uint8_t sub) {
+    uint16_t ga = ((main & 0xF0)<<12) | ((middle & 0x0F) <<8) | (sub & 0xFF);
+    return isListeningToGroupAddress(ga);
+}
+
+bool KnxTpUart::isListeningToGroupAddress(uint16_t aAddress)
+{
+    for (int i = 0; i < mListenGAsCount; i++)
+    {
+        if (mListenGAs[i] == aAddress)
+        {
+        	return true;
+        }
+    }
+    return false;
+}
+
+#endif
