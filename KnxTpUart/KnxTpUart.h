@@ -38,7 +38,7 @@
 #define SERIAL_READ_TIMEOUT_MS 10
 
 // If KNX_SUPPORT_LISTEN_GAS is defined listening GAs can be added.
-//#define KNX_SUPPORT_LISTEN_GAS
+#define KNX_SUPPORT_LISTEN_GAS
 
 // Definition of callback function type to allow application to check if telegram is of interest
 typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
