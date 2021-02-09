@@ -339,7 +339,7 @@ bool KnxTelegram::getBool() {
   return (getFirstDataByte() & B00000001);
 }
 
-int8_t KnxTelegram::get4BitIntValue() {
+uint8_t KnxTelegram::get4BitIntValue() {
   if (getPayloadLength() != 2) {
     // Wrong payload length
     return 0;

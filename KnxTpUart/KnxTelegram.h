@@ -136,7 +136,7 @@ class KnxTelegram {
     uint8_t getFirstDataByte();
     bool getBool();
 
-    int8_t get4BitIntValue();
+    uint8_t get4BitIntValue();
     bool get4BitDirectionValue();
     uint8_t get4BitStepsValue();
 
