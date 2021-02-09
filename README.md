@@ -275,3 +275,11 @@ float value = telegram->get4ByteFloatValue();
 <pre>
 String value = telegram->get14ByteValue();
 </pre>
+
+References
+----------
+The following links can be helpfull
+- https://www.hqs.sbt.siemens.com/cps_product_data/gamma-b2b/PCBA_UP117-12_datasheet.pdf
+- https://www.hqs.sbt.siemens.com/cps_product_data/gamma-b2b/TPUART2_technical-data.pdf
+- https://sar.informatik.hu-berlin.de/research/publications/SAR-PR-2017-01/SAR-PR-2017-01_.pdf
+- https://github.com/franckmarini/KnxDevice
