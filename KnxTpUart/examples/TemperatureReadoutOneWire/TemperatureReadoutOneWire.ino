@@ -15,16 +15,16 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
 // Define group address to react on (for read requests)
-#define READ_GROUP "0/0/100""
+#define READ_GROUP KNX_GA(0,0,100)
 
 // Define group address to send temperature to
-#define WRITE_GROUP "0/0/101"
+#define WRITE_GROUP KNX_GA(0,0,101)
 
 // Define send interval
 #define SEND_INTERVAL_MS 5000
 
 // Initialize the KNX TP-UART library on the Serial1 port of ARDUINO MEGA
-KnxTpUart knx(&Serial1, "15.15.20");
+KnxTpUart knx(&Serial1, KNX_IA(15,15,20));
 
 unsigned long startTime;
 
@@ -44,6 +44,8 @@ void setup() {
   Serial.println(UCSR1C, BIN);
 
   knx.uartReset();
+
+  knx.setListenAddressCount(1);
   knx.addListenGroupAddress(READ_GROUP);
 
   startTime = millis();

@@ -8,7 +8,7 @@
 #include <KnxTpUart.h>
 
 // Initialize the KNX TP-UART library on the Serial1 port of ARDUINO MEGA
-KnxTpUart knx(&Serial1, "15.15.20");
+KnxTpUart knx(&Serial1, KNX_IA(15,15,20));
 
 // Start in programming mode
 boolean programmingMode = true;
@@ -36,17 +36,16 @@ void serialEvent1() {
       // Broadcast to all devices in programming mode to store new physical address
       Serial.print("Received IndvAddrWrite: ");
 
-      int area = (telegram->getBufferByte(8) & B11110000) >> 4;
-      int line = telegram->getBufferByte(8) & B00001111;
-      int member = telegram->getBufferByte(9);
+      uint16_t address = telegram->getBufferByte(8);
+      address = (address<<8) | telegram->getBufferByte(9);
 
-      Serial.print(area);
+      Serial.print((address >> 12) & 0x0F);
       Serial.print(".");
-      Serial.print(line);
+      Serial.print((address >> 8) & 0x0F);
       Serial.print(".");
-      Serial.println(member);   
+      Serial.println(address & 0xFF);
 
-      knx.setIndividualAddress(area, line, member);    
+      knx.setIndividualAddress(address);
 
       // Here the new address could be stored to EEPROM and be reloaded after restart of Arduino   
     } 

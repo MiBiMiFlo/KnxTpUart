@@ -9,7 +9,7 @@
 #include <ArduinoUnit.h>
 
 TestSuite suite;
-KnxTpUart knx(&Serial1, "15.15.20");
+KnxTpUart knx(&Serial1, KNX_IA(15,15,20));
 KnxTelegram* knxTelegram = new KnxTelegram();
 
 void setup() {
@@ -66,14 +66,14 @@ test(priorityProperty) {
 }
 
 test(sourceAddressProperties) {
-  knxTelegram->setSourceAddress(15, 12, 20);
+  knxTelegram->setSourceAddress(KNX_GA(15, 12, 20));
   assertEquals(15, knxTelegram->getSourceArea());
   assertEquals(12, knxTelegram->getSourceLine());
   assertEquals(20, knxTelegram->getSourceMember()); 
 }
 
 test(targetAddressProperties) {
-  knxTelegram->setTargetGroupAddress(0, 3, 15);
+  knxTelegram->setTargetGroupAddress(KNX_GA(0,3,15));
   assertTrue(knxTelegram->isTargetGroup());
   assertEquals(0, knxTelegram->getTargetMainGroup());
   assertEquals(3, knxTelegram->getTargetMiddleGroup());
@@ -112,9 +112,9 @@ test(checksumProperty) {
 }
 
 test(receivingGroupAddresses) {
-  knx.addListenGroupAddress(15, 15, 100);
-  assertTrue(knx.isListeningToGroupAddress(15, 15, 100));
-  assertTrue(! knx.isListeningToGroupAddress(15, 3, 28)); 
+  knx.addListenGroupAddress(KNX_GA(15, 15, 100));
+  assertTrue(knx.isListeningToGroupAddress(KNX_GA(15, 15, 100)));
+  assertTrue(! knx.isListeningToGroupAddress(KNX_GA(15, 3, 28)));
 }
 
 test(floatValues) {
