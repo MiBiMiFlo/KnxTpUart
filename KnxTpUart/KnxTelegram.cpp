@@ -10,20 +10,24 @@
 
 #include "KnxTelegram.h"
 
-KnxTelegram::KnxTelegram() {
-  clear();
+KnxTelegram::KnxTelegram()
+{
+    clear();
 }
 
-void KnxTelegram::clear() {
-  for (int i = 0; i < MAX_KNX_TELEGRAM_SIZE; i++) {
-    buffer[i] = 0;
-  }
+void KnxTelegram::clear()
+{
 
-  // Control Field, Normal Priority, No Repeat
-  buffer[0] = B10111100;
+    // initialize buffer to all 0
+    memset(buffer, 0, sizeof(MAX_KNX_TELEGRAM_SIZE));
 
-  // Target Group Address, Routing Counter = 6, Length = 1 (= 2 Bytes)
-  buffer[5] = B11100001;
+    // Initialize control fields
+
+    // Control Field, Normal Priority, No Repeat
+    buffer[0] = B10111100;
+
+    // Target Group Address, Routing Counter = 6, Length = 1 (= 2 Bytes)
+    buffer[5] = B11100001;
 }
 
 uint8_t KnxTelegram::getBufferByte(uint8_t index) {
@@ -32,6 +36,11 @@ uint8_t KnxTelegram::getBufferByte(uint8_t index) {
 
 void KnxTelegram::setBufferByte(uint8_t index, uint8_t aContent) {
   buffer[index] = aContent;
+}
+
+uint8_t * KnxTelegram::getBuffer()
+{
+	return buffer;
 }
 
 bool KnxTelegram::isRepeated() {
@@ -148,7 +157,7 @@ uint8_t KnxTelegram::getTargetSubGroup() {
 
 uint16_t KnxTelegram::getTargetGroupAddress()
 {
-	return (((uint16_t)buffer[3]) << 8) | buffer[4];
+    return (((uint16_t)buffer[3]) << 8) | buffer[4];
 }
 
 uint8_t KnxTelegram::getTargetArea() {
@@ -179,13 +188,13 @@ uint8_t KnxTelegram::getRoutingCounter() {
   return ((buffer[5] & B01110000) >> 4);
 }
 
-void KnxTelegram::setPayloadLength(uint8_t length) {
+void KnxTelegram::setPayloadLength(uint8_t aLength) {
   buffer[5] = buffer[5] & B11110000;
-  buffer[5] = buffer[5] | (length - 1);
+  buffer[5] = buffer[5] | ((aLength - 1) & B00001111);
 }
 
-int KnxTelegram::getPayloadLength() {
-  int length = (buffer[5] & B00001111) + 1;
+uint8_t KnxTelegram::getPayloadLength() {
+  uint8_t length = (buffer[5] & B00001111) + 1;
   return length;
 }
 
@@ -243,7 +252,7 @@ bool KnxTelegram::verifyChecksum() {
 	return (getChecksum() == calculatedChecksum);
 }
 
-void KnxTelegram::print(TPUART_SERIAL_CLASS* serial) {
+void KnxTelegram::print(Stream* serial) {
 #if defined(TPUART_DEBUG)
   serial->print("Repeated: ");
   serial->println(isRepeated());
@@ -323,7 +332,7 @@ uint8_t KnxTelegram::getTotalLength() {
 
 void KnxTelegram::setFirstDataByte(uint8_t aData) {
   buffer[7] = buffer[7] & B11000000;
-  buffer[7] = buffer[7] | aData;
+  buffer[7] = buffer[7] | (aData & B00111111);
 }
 
 uint8_t KnxTelegram::getFirstDataByte() {
@@ -626,16 +635,12 @@ float KnxTelegram::get4ByteFloatValue() {
 }
 
 void KnxTelegram::set14ByteValue(String value) {
+    setPayloadLength(16);
+
     // Define
     char _load[15];
+    memset(_load, 0, 15);
 
-    // Empty/Initialize with space
-    for (int i = 0; i < 14; ++i)
-    {
-        _load[i] = 0;
-    }
-
-    setPayloadLength(16);
     // Make out of value the Chararray
     value.toCharArray(_load, 15); // Must be 15 - because it completes with 0
     for (uint8_t i = 0; i < 14; i++)
@@ -654,15 +659,28 @@ String KnxTelegram::get14ByteValue() {
     {
         _load[i] = buffer[8 + i];
     }
+
+    _load[14] = 0x00;
     return (_load);
 }
 
 
-uint8_t KnxTelegram::getValue(uint8_t* aBuffer, uint8_t aCount)
+uint8_t KnxTelegram::getValue(void* aBuffer, uint8_t aCount)
 {
-	if (getPayloadLength() < aCount)
+	uint8_t pll = getPayloadLength();
+
+	if(pll < 3)
 	{
-		aCount = getPayloadLength();
+		// short buffer
+		((uint8_t*)aBuffer)[0] = getFirstDataByte();
+		return 1;
+	}
+
+	// in long telegram we ignore first two bytes
+	pll -= 2;
+	if (pll < aCount)
+	{
+		aCount = pll;
 	}
 	memcpy(aBuffer, buffer+8, aCount);
 	return aCount;
