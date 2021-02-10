@@ -9,13 +9,13 @@
 
 #include "KnxTpUart.h"
 
-KnxTpUart::KnxTpUart(TPUART_SERIAL_CLASS* sport, String address) {
+KnxTpUart::KnxTpUart(Stream* sport, String address) {
     _serialport = sport;
     setIndividualAddress(getSourceAddress(address));
     init();
 }
 
-KnxTpUart::KnxTpUart(TPUART_SERIAL_CLASS* sport, uint16_t aAddress) {
+KnxTpUart::KnxTpUart(Stream* sport, uint16_t aAddress) {
     _serialport = sport;
     setIndividualAddress(aAddress);
     init();
@@ -203,11 +203,19 @@ bool KnxTpUart::readKNXTelegram() {
   }
 #endif
 
-  // Physical address
-  interested |= ((!_tg->isTargetGroup()) && _tg->getTargetAddress() == mSourceAddress);
-
-  // Broadcast (Programming Mode)
-  interested |= (_listen_to_broadcasts && _tg->isTargetGroup() && _tg->getTargetGroupAddress() == 0x0000);
+    if (!interested)
+    {
+	    if (_tg->isTargetGroup())
+	    {
+	  	    // Broadcast (Programming Mode)
+            interested |= (_listen_to_broadcasts && _tg->getTargetGroupAddress() == 0x0000);
+	    }
+	    else
+	    {
+	  	  // Physical address
+	        interested |= (_tg->getTargetAddress() == mSourceAddress);
+	    }
+  }
 
   if (interested)
   {
@@ -900,13 +908,21 @@ bool KnxTpUart::setListenAddressCount(uint8_t aCount)
 	{
 		// free the previously allocated buffer
 		free(mListenGAs);
-		mListenGAs=NULL;
+		mListenGAs = NULL;
 	}
+	mListenGAsCount = 0;
 
 	// allocate new buffer (2 bytes per address)
 	mListenGAs      = (uint16_t *)malloc(2*aCount);
-	mListenGAsCount = 0;
+	if (mListenGAs == NULL)
+	{
+		// not possible to allocate buffer
+		mListenGAsMax = 0;
+		return false;
+	}
+
 	mListenGAsMax   = aCount;
+	return true;
 }
 
 

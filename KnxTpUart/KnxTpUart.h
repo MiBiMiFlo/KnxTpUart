@@ -27,7 +27,6 @@
 
 #define TPUART_DEBUG_PORT Serial
 
-#define TPUART_SERIAL_CLASS Stream
 
 // Delay in ms between sending of packets to the bus
 // Change only if you know what you're doing
@@ -59,14 +58,14 @@ class KnxTpUart {
 	 * @param aPort the communication port.
 	 * @param aAddress The source address to use.
 	 */
-    KnxTpUart(TPUART_SERIAL_CLASS* aPort, String aAddress);
+    KnxTpUart(Stream* aPort, String aAddress);
 
 	/**
 	 * Create a new instance.
 	 * @param aPort the communication port.
 	 * @param aAddress The source address to use.
 	 */
-    KnxTpUart(TPUART_SERIAL_CLASS*, uint16_t);
+    KnxTpUart(Stream*, uint16_t);
 
     /**
      * Perform a UART connection reset.
@@ -529,7 +528,12 @@ class KnxTpUart {
     bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint16_t aAddress);
 
 
-    void setListenToBroadcasts(bool aValue);
+    /**
+     * Set if listen to broadcast messages is wanted.
+     * This is used for programming mode (to learn device address through ETS).
+     * @param aFlag true if broadcast messages should be listened for, false otherwise.
+     */
+    void setListenToBroadcasts(bool aFlag);
 
     /**
      * Converts a String of the form 1/2/3 into a 2 byte group address.
@@ -693,6 +697,7 @@ class KnxTpUart {
 
     /**
      * Read a single byte from serial interface with timeout.
+     * @return the read byte or -1 in case of timeout.
      */
     int serialRead();
 
