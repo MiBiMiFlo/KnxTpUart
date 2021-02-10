@@ -27,6 +27,10 @@ void KnxTpUart::init(void)
     _listen_to_broadcasts  = false;
     mTelegramCheckCallback = NULL;
 
+    // KNX telegram can be 23 byte --> 184 bit --> ~19.1ms in 9600 Bit/s TP
+    // as we read in a loop we allow a telegram to be separated into two blocks of 10ms timeout
+    _serialport->setTimeout(SERIAL_READ_TIMEOUT_MS);
+
 #ifdef KNX_SUPPORT_LISTEN_GAS
     mListenGAs      = NULL;
     mListenGAsCount = 0;
@@ -65,18 +69,24 @@ KnxTpUartSerialEventType KnxTpUart::serialEvent() {
     printByte(incomingByte);
 
     if (isKNXControlByte(incomingByte & 0xFF)) {
-      bool interested = readKNXTelegram();
-      if (interested) {
+    	KnxTpUartSerialEventType readRes = readKNXTelegram();
+      if (readRes == KNX_TELEGRAM) {
 #if defined(TPUART_DEBUG)
         TPUART_DEBUG_PORT.println("Event KNX_TELEGRAM");
 #endif
-        return KNX_TELEGRAM;
+        return readRes;
       }
-      else {
+      else if (readRes == IRRELEVANT_KNX_TELEGRAM) {
 #if defined(TPUART_DEBUG)
         TPUART_DEBUG_PORT.println("Event IRRELEVANT_KNX_TELEGRAM");
 #endif
-        return IRRELEVANT_KNX_TELEGRAM;
+        return readRes;
+      }
+      else if (readRes == TIMEOUT) {
+#if defined(TPUART_DEBUG)
+        TPUART_DEBUG_PORT.println("Read Timeout");
+        return readRes;
+#endif
       }
     }
     else if (incomingByte == TPUART_RESET_INDICATION_BYTE) {
@@ -165,43 +175,63 @@ void KnxTpUart::printByte(uint8_t aByte) {
 #endif
 }
 
-bool KnxTpUart::readKNXTelegram() {
-  // Receive header
-  for (int i = 0; i < 6; i++) {
-    _tg->setBufferByte(i, serialRead() & 0xFF);
-  }
+KnxTpUartSerialEventType KnxTpUart::readKNXTelegram()
+{
+    // read 9 byte (minimum telegram length)
+	size_t offs = 0;
 
-#if defined(TPUART_DEBUG)
-  TPUART_DEBUG_PORT.print("Payload Length: ");
-  TPUART_DEBUG_PORT.println(_tg->getPayloadLength());
-#endif
-  int bufpos = 6;
-  for (int i = 0; i < _tg->getPayloadLength(); i++) {
-    _tg->setBufferByte(bufpos, serialRead() & 0xFF);
-    bufpos++;
-  }
+	while (offs < 9)
+	{
+		int read = _serialport->readBytes(_tg->getBuffer() + offs, 9 - offs);
+		if (read > 0)
+		{
+			// at least one byte received
+			offs += read;
+		}
+		else
+		{
+			//timeout
+			// we do a uart reset and return a false
+			uartReset();
+			return TIMEOUT;
+		}
+	}
 
-  // Checksum
-  _tg->setBufferByte(bufpos, serialRead() & 0xFF);
+	uint8_t fullLen = 9 + _tg->getPayloadLength() - 2;
+	while (offs < fullLen)
+	{
+		int read = _serialport->readBytes(_tg->getBuffer() + offs, fullLen - offs);
+		if (read > 0)
+		{
+			offs += read;
+		}
+		else
+		{
+			//timeout
+			// we do a uart reset and return a false
+			uartReset();
+			return TIMEOUT;
+		}
+	}
 
-#if defined(TPUART_DEBUG)
-  // Print the received telegram
-  _tg->print(&TPUART_DEBUG_PORT);
-#endif
+    #if defined(TPUART_DEBUG)
+        // Print the received telegram
+        _tg->print(&TPUART_DEBUG_PORT);
+    #endif
 
-  bool interested = false;
-  if (mTelegramCheckCallback != NULL)
-  {
-	  interested |=mTelegramCheckCallback(_tg);
-  }
+    bool interested = false;
+    if (mTelegramCheckCallback != NULL)
+    {
+	    interested |= mTelegramCheckCallback(_tg);
+    }
 
-#ifdef KNX_SUPPORT_LISTEN_GAS
-  if (!interested)
-  {
-	  // Verify if we are interested in this message - GroupAddress
-	  interested = _tg->isTargetGroup() && isListeningToGroupAddress(_tg->getTargetGroupAddress());
-  }
-#endif
+    #ifdef KNX_SUPPORT_LISTEN_GAS
+        if (!interested)
+        {
+            // Verify if we are interested in this message - GroupAddress
+            interested = _tg->isTargetGroup() && isListeningToGroupAddress(_tg->getTargetGroupAddress());
+        }
+	#endif
 
     if (!interested)
     {
@@ -215,36 +245,39 @@ bool KnxTpUart::readKNXTelegram() {
 	  	  // Physical address
 	        interested |= (_tg->getTargetAddress() == mSourceAddress);
 	    }
-  }
-
-  if (interested)
-  {
-      sendAck();
-  }
-  else
-  {
-      sendNotAddressed();
-  }
-
-  if (_tg->getCommunicationType() == KNX_COMM_UCD) {
-#if defined(TPUART_DEBUG)
-    TPUART_DEBUG_PORT.println("UCD Telegram received");
-#endif
-  }
-  else if (_tg->getCommunicationType() == KNX_COMM_NCD) {
-#if defined(TPUART_DEBUG)
-    TPUART_DEBUG_PORT.print("NCD Telegram ");
-    TPUART_DEBUG_PORT.print(_tg->getSequenceNumber());
-    TPUART_DEBUG_PORT.println(" received");
-#endif
-    if (interested) {
-        // Thanks to Katja Blankenheim for the help
-        sendNCDPosConfirm(_tg->getSequenceNumber(), _tg->getSourceAddress());
     }
-  }
 
-  // Returns if we are interested in this diagram
-  return interested;
+    if (interested)
+    {
+        sendAck();
+    }
+    else
+    {
+        sendNotAddressed();
+    }
+
+    if (_tg->getCommunicationType() == KNX_COMM_UCD)
+    {
+        #if defined(TPUART_DEBUG)
+		    TPUART_DEBUG_PORT.println("UCD Telegram received");
+	    #endif
+    }
+    else if (_tg->getCommunicationType() == KNX_COMM_NCD)
+    {
+        #if defined(TPUART_DEBUG)
+            TPUART_DEBUG_PORT.print("NCD Telegram ");
+            TPUART_DEBUG_PORT.print(_tg->getSequenceNumber());
+            TPUART_DEBUG_PORT.println(" received");
+        #endif
+        if (interested)
+        {
+            // Thanks to Katja Blankenheim for the help
+            sendNCDPosConfirm(_tg->getSequenceNumber(), _tg->getSourceAddress());
+        }
+    }
+
+    // Returns if we are interested in this diagram
+    return interested ? KNX_TELEGRAM : IRRELEVANT_KNX_TELEGRAM;
 }
 
 KnxTelegram* KnxTpUart::getReceivedTelegram() {
@@ -794,56 +827,72 @@ bool KnxTpUart::sendMessage()
     return sendTelegram(_tg);
 }
 
-bool KnxTpUart::sendTelegram(KnxTelegram* aTelegram) {
-	uint8_t messageSize = aTelegram->getTotalLength();
+bool KnxTpUart::sendTelegram(KnxTelegram* aTelegram)
+{
+    uint8_t messageSize = aTelegram->getTotalLength();
 
-  uint8_t sendbuf[2];
-  for (int i = 0; i < messageSize; i++) {
-    if (i == (messageSize - 1)) {
-      sendbuf[0] = TPUART_DATA_END;
+    uint8_t sendbuf[2];
+    for (int i = 0; i < messageSize; i++)
+    {
+        if (i == (messageSize - 1))
+        {
+            sendbuf[0] = TPUART_DATA_END;
+        }
+        else
+        {
+            sendbuf[0] = TPUART_DATA_START_CONTINUE;
+        }
+
+        sendbuf[0] |= i;
+        sendbuf[1] = aTelegram->getBufferByte(i);
+
+        _serialport->write(sendbuf, 2);
     }
-    else {
-      sendbuf[0] = TPUART_DATA_START_CONTINUE;
+
+
+    int confirmation;
+    bool res;
+    while (true)
+    {
+        confirmation = serialRead();
+        if (confirmation == B10001011)
+        {
+        	// Sent successfully
+            res = true;
+            break;
+        }
+        else if (confirmation == B00001011)
+        {
+        	// Sent unsuccessfully
+            res = false;
+            break;
+        }
+        else if (confirmation == -1)
+        {
+            // Read timeout
+            res = false;
+            break;
+        }
     }
 
-    sendbuf[0] |= i;
-    sendbuf[1] = aTelegram->getBufferByte(i);
-
-    _serialport->write(sendbuf, 2);
-  }
-
-
-  int confirmation;
-  while (true) {
-    confirmation = serialRead();
-    if (confirmation == B10001011) {
-      delay (SERIAL_WRITE_DELAY_MS);
-      return true; // Sent successfully
-    }
-    else if (confirmation == B00001011) {
-      delay (SERIAL_WRITE_DELAY_MS);
-      return false;
-    }
-    else if (confirmation == -1) {
-      // Read timeout
-      delay (SERIAL_WRITE_DELAY_MS);
-      return false;
-    }
-  }
-
-  return false;
+#if defined(SERIAL_WRITE_DELAY_MS)
+    delay(SERIAL_WRITE_DELAY_MS);
+#endif
+    return res;
 }
 
-void KnxTpUart::sendAck() {
-	uint8_t sendByte = B00010001;
-  _serialport->write(sendByte);
-  delay(SERIAL_WRITE_DELAY_MS);
+
+void KnxTpUart::sendAck()
+{
+    uint8_t sendByte = B00010001;
+    _serialport->write(sendByte);
 }
 
-void KnxTpUart::sendNotAddressed() {
-	uint8_t sendByte = B00010000;
-  _serialport->write(sendByte);
-  delay(SERIAL_WRITE_DELAY_MS);
+
+void KnxTpUart::sendNotAddressed()
+{
+    uint8_t sendByte = B00010000;
+    _serialport->write(sendByte);
 }
 
 int KnxTpUart::serialRead() {

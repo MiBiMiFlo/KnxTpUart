@@ -30,7 +30,7 @@
 
 // Delay in ms between sending of packets to the bus
 // Change only if you know what you're doing
-#define SERIAL_WRITE_DELAY_MS 100
+//#define SERIAL_WRITE_DELAY_MS 100
 
 // Timeout for reading a byte from TPUART
 // Change only if you know what you're doing
@@ -39,13 +39,17 @@
 // If KNX_SUPPORT_LISTEN_GAS is defined listening GAs can be added.
 #define KNX_SUPPORT_LISTEN_GAS
 
-// Definition of callback function type to allow application to check if telegram is of interest
+/**
+ * Definition of callback function type to allow application to check if telegram is of interest
+ */
 typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
 
-enum KnxTpUartSerialEventType {
+enum KnxTpUartSerialEventType
+{
   TPUART_RESET_INDICATION,
   KNX_TELEGRAM,
   IRRELEVANT_KNX_TELEGRAM,
+  TIMEOUT,
   UNKNOWN
 };
 
@@ -641,7 +645,7 @@ class KnxTpUart {
     /**
      * Read a telegram from BUS into the internal telegram buffer
      */
-    bool readKNXTelegram();
+    KnxTpUartSerialEventType readKNXTelegram();
 
     /**
      * Initialize the internal telegram buffer for a new message.
