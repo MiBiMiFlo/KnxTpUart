@@ -22,6 +22,18 @@
 
 #define TPUART_DATA_END B01000000
 
+#define TPUART_SEND_SUCCESS B10001011
+
+#define TPUART_SEND_NOT_SUCCESS B00001011
+
+#define TPUART_ACK B00010001
+
+#define TPUART_NACK B00010000
+
+#define TPUART_RESET 0x01
+
+#define TPUART_STATE_REQUEST 0x02
+
 // Uncomment the following line to enable debugging
 //#define TPUART_DEBUG
 
