@@ -294,10 +294,46 @@ class KnxTpUart {
 	 */
     bool groupWrite2ByteFloat(uint16_t aAddress, float aValue);
 
+    /**
+     * Send a 3 byte value of DPT 10 containing the time.
+     * @param aAddress the address to write to.
+     * @param aWeekday the day of the week
+     * @param aHour the hour
+     * @param aMinute the minute
+     * @param aSecond the second
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupWrite3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+
+    /**
+     * Send a 3 byte value of DPT 10 (time).
+     * @param aAddress the address to write to.
+     * @param aWeekday the day of the week.
+     * @param aHour the hour.
+     * @param aMinute the minute.
+     * @param aSecond the second.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupWrite3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
 
+    /**
+     * Send a 3 byte value of DPT 11 (date).
+     * @param aAddress the address to write to.
+     * @param aDay the day of the month.
+     * @param aMonth the month of the year.
+     * @param aYear the year.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupWrite3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+
+    /**
+     * Send a 3 byte value of DPT 11 (date).
+     * @param aAddress the address to write to.
+     * @param aDay the day of the month.
+     * @param aMonth the month of the year.
+     * @param aYear the year.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupWrite3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
     /**
@@ -332,7 +368,11 @@ class KnxTpUart {
     bool groupWrite14ByteText(uint16_t aAddress, String aValue);
 
     /**
-     * Send a buffer
+     * Send a buffer to a group address.
+     * @param aAddress the address to write to.
+     * @param aBuffer the buffer to send.
+     * @param aSize the number of bytes to send from buffer.
+     * @return true if writing was successful, false otherwise.
      */
     bool groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
 
@@ -492,6 +532,7 @@ class KnxTpUart {
 	 * @see #groupWrite2ByteFloat
 	 */
     bool groupAnswer2ByteFloat(String aAddress, float aValue);
+
     /**
 	 * Send a 16bit float answer to a group address.
 	 * @param aAddress the address to write to.
@@ -501,10 +542,46 @@ class KnxTpUart {
 	 */
     bool groupAnswer2ByteFloat(uint16_t aAddress, float aValue);
 
+    /**
+	 * Send a 3 byte answer of DPT 10 (time).
+	 * @param aAddress the address to write to.
+	 * @param aWeekday the day of the week.
+	 * @param aHour the hour.
+	 * @param aMinute the minute.
+	 * @param aSecond the second.
+	 * @return true if writing was successful, false otherwise.
+	 */
     bool groupAnswer3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+
+    /**
+	 * Send a 3 byte answer of DPT 10 (time).
+	 * @param aAddress the address to write to.
+	 * @param aWeekday the day of the week.
+	 * @param aHour the hour.
+	 * @param aMinute the minute.
+	 * @param aSecond the second.
+	 * @return true if writing was successful, false otherwise.
+	 */
     bool groupAnswer3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
 
+    /**
+     * Send a 3 byte value of DPT 11 (date).
+     * @param aAddress the address to write to.
+     * @param aDay the day of the month.
+     * @param aMonth the month of the year.
+     * @param aYear the year.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupAnswer3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+
+    /**
+     * Send a 3 byte value of DPT 11 (date).
+     * @param aAddress the address to write to.
+     * @param aDay the day of the month.
+     * @param aMonth the month of the year.
+     * @param aYear the year.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupAnswer3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
     /**
@@ -525,22 +602,87 @@ class KnxTpUart {
 	 */
     bool groupAnswer4ByteFloat(uint16_t aAddress, float aValue);
 
+    /**
+	 * Send a 14 byte text answer to a group address.
+	 * @param aAddress the address to write to.
+	 * @param aValue the value to send.
+	 * @return true if writing was successful, false otherwise.
+	 */
     bool groupAnswer14ByteText(String aAddress, String aValue);
+
+    /**
+	 * Send a 14 byte text answer to a group address.
+	 * @param aAddress the address to write to.
+	 * @param aValue the value to send.
+	 * @return true if writing was successful, false otherwise.
+	 */
     bool groupAnswer14ByteText(uint16_t aAddress, String aValue);
 
+    /**
+     * Send a buffer to a group address.
+     * @param aAddress the address to write to.
+     * @param aBuffer the buffer to send.
+     * @param aSize the number of bytes to send from buffer.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupAnswerBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
 
     // Start of definitions for uint16_t address functions
 
+    /**
+     * Request an answer for the actual value of a group address.
+     * This does not wait for an answer, waiting for an answer by calling
+     * #serialEvent and #getReceivedTelegram need to be performed afterwards.
+     * @param aAddress the address to request an answer from.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupRead(String aAddress);
+
+    /**
+     * Request an answer for the actual value of a group address.
+     * This does not wait for an answer, waiting for an answer by calling
+     * #serialEvent and #getReceivedTelegram need to be performed afterwards.
+     * @param aAddress the address to request an answer from.
+     * @return true if writing was successful, false otherwise.
+     */
     bool groupRead(uint16_t aAddress);
 
+    /**
+     * Send a KNX telegram with command KNX_COMMAND_INDIVIDUAL_ADDR_RESPONSE.
+     * @return true if writing was successful, false otherwise.
+     */
     bool individualAnswerAddress();
 
+    /**
+     * Send a KNX telegram with command KNX_COMMAND_MASK_VERSION_RESPONSE.
+     * @return true if writing was successful, false otherwise.
+     */
     bool individualAnswerMaskVersion(uint8_t aArea, uint8_t aLine, uint8_t aMember);
+
+    /**
+     * Send a KNX telegram with command KNX_COMMAND_MASK_VERSION_RESPONSE.
+     * @return true if writing was successful, false otherwise.
+     */
     bool individualAnswerMaskVersion(uint16_t);
 
+    /**
+     * Send a KNX telegram with command KNX_COMMAND_ESCAPE and KNX_EXT_COMMAND_AUTH_RESPONSE as data.
+     * @param aAccessLevel the access level.
+     * @param aSequenceNo the sequence number.
+     * @param aArea the area part of the target address.
+     * @param aLine the line part of the target address.
+     * @param aMember the member part of the target address.
+     * @return true if writing was successful, false otherwise.
+     */
     bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint8_t aArea, uint8_t aLine, uint8_t aMember);
+
+    /**
+	 * Send a KNX telegram with command KNX_COMMAND_ESCAPE and KNX_EXT_COMMAND_AUTH_RESPONSE as data.
+	 * @param aAccessLevel the access level.
+	 * @param aSequenceNo the sequence number.
+	 * @param aAddress the target address.
+	 * @return true if writing was successful, false otherwise.
+	 */
     bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint16_t aAddress);
 
 
@@ -580,10 +722,35 @@ class KnxTpUart {
 
 #ifdef KNX_SUPPORT_LISTEN_GAS
 
+    /**
+     * Add a group address to the list of listening addresses.
+     * @param aAddress the address to listen to.
+     * @return true if the address was added, false otherwise.
+     * False very likely means that no space is left in the list and
+     * #setListenAddressCount need to be called with a bigger value.
+     */
     bool addListenGroupAddress(String aAddress);
+
+    /**
+	 * Add a group address to the list of listening addresses.
+	 * @param aAddress the address to listen to.
+	 */
     bool addListenGroupAddress(uint16_t aAddress);
 
+    /**
+     * Check if the given address is added to the list of listening addresses.
+     * @param aMain the main part of the address.
+     * @param aMiddle	the middle part of the address.
+     * @param aSub the sub part of the address.
+     * @return true if the address is contained in the list of listening addresses.
+     */
     bool isListeningToGroupAddress(uint8_t aMain, uint8_t aMiddle, uint8_t aSub);
+
+    /**
+     * Check if the given address is added to the list of listening addresses.
+     * @param aAddress the address.
+     * @return true if the address is contained in the list of listening addresses.
+     */
     bool isListeningToGroupAddress(uint16_t aAddress);
 
 
@@ -617,6 +784,7 @@ class KnxTpUart {
     uint16_t mSourceAddress;
 
 #ifdef KNX_SUPPORT_LISTEN_GAS
+
     /**
      * The list of group addresses to listen to.
      */
@@ -627,6 +795,9 @@ class KnxTpUart {
      */
     uint8_t mListenGAsCount;
 
+    /**
+     * The maximum number of GAs to listen to.
+     */
     uint8_t mListenGAsMax;
 #endif
 
@@ -645,8 +816,14 @@ class KnxTpUart {
      */
     void init(void);
 
+    /**
+     * @return true if the given byte is a control byte.
+     */
     bool isKNXControlByte(uint8_t aByte);
 
+    /**
+     * Check for errors in USART control registers.
+     */
     void checkErrors(void);
 
     /**
