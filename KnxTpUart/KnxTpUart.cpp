@@ -967,13 +967,16 @@ bool KnxTpUart::setListenAddressCount(uint8_t aCount)
 	}
 	mListenGAsCount = 0;
 
-	// allocate new buffer (2 bytes per address)
-	mListenGAs      = (uint16_t *)malloc(2*aCount);
-	if (mListenGAs == NULL)
+	if (aCount > 0)
 	{
-		// not possible to allocate buffer
-		mListenGAsMax = 0;
-		return false;
+		// allocate new buffer (2 bytes per address)
+		mListenGAs      = (uint16_t *)malloc(2*aCount);
+		if (mListenGAs == NULL)
+		{
+			// not possible to allocate buffer
+			mListenGAsMax = 0;
+			return false;
+		}
 	}
 
 	mListenGAsMax   = aCount;
