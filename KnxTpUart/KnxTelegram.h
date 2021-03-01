@@ -486,7 +486,7 @@ class KnxTelegram {
 
     /**
      * Set the payload data to be a 3 byte time value.
-     * @param aWeekday the weekday (0-6)
+     * @param aWeekday the weekday (0-7)
      * @param aHour the hour (0-23)
      * @param aMinute the minute (0-59)
      * @param aSecond the second (0-59)
@@ -512,9 +512,9 @@ class KnxTelegram {
 
     /**
      * Set the payload data to be an 3 byte date.
-     * @param aDay the day part of the date.
-     * @param aMonth the month part of the date.
-     * @param aYear the year part of the date.
+     * @param aDay the day part of the date (1-31).
+     * @param aMonth the month part of the date (1-12).
+     * @param aYear the year part of the date 0 = 1990 so valid range is (1990-2089).
      */
     void set3ByteDate(uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
