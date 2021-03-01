@@ -22,16 +22,27 @@
 
 #define TPUART_DATA_END B01000000
 
+#define TPUART_SEND_SUCCESS B10001011
+
+#define TPUART_SEND_NOT_SUCCESS B00001011
+
+#define TPUART_ACK B00010001
+
+#define TPUART_NACK B00010000
+
+#define TPUART_RESET 0x01
+
+#define TPUART_STATE_REQUEST 0x02
+
 // Uncomment the following line to enable debugging
 //#define TPUART_DEBUG
 
 #define TPUART_DEBUG_PORT Serial
 
-#define TPUART_SERIAL_CLASS Stream
 
 // Delay in ms between sending of packets to the bus
 // Change only if you know what you're doing
-#define SERIAL_WRITE_DELAY_MS 100
+//#define SERIAL_WRITE_DELAY_MS 100
 
 // Timeout for reading a byte from TPUART
 // Change only if you know what you're doing
@@ -40,13 +51,17 @@
 // If KNX_SUPPORT_LISTEN_GAS is defined listening GAs can be added.
 #define KNX_SUPPORT_LISTEN_GAS
 
-// Definition of callback function type to allow application to check if telegram is of interest
+/**
+ * Definition of callback function type to allow application to check if telegram is of interest
+ */
 typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
 
-enum KnxTpUartSerialEventType {
+enum KnxTpUartSerialEventType
+{
   TPUART_RESET_INDICATION,
   KNX_TELEGRAM,
   IRRELEVANT_KNX_TELEGRAM,
+  TIMEOUT,
   UNKNOWN
 };
 
@@ -59,14 +74,14 @@ class KnxTpUart {
 	 * @param aPort the communication port.
 	 * @param aAddress The source address to use.
 	 */
-    KnxTpUart(TPUART_SERIAL_CLASS* aPort, String aAddress);
+    KnxTpUart(Stream* aPort, String aAddress);
 
 	/**
 	 * Create a new instance.
 	 * @param aPort the communication port.
 	 * @param aAddress The source address to use.
 	 */
-    KnxTpUart(TPUART_SERIAL_CLASS*, uint16_t);
+    KnxTpUart(Stream*, uint16_t);
 
     /**
      * Perform a UART connection reset.
@@ -529,7 +544,12 @@ class KnxTpUart {
     bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint16_t aAddress);
 
 
-    void setListenToBroadcasts(bool aValue);
+    /**
+     * Set if listen to broadcast messages is wanted.
+     * This is used for programming mode (to learn device address through ETS).
+     * @param aFlag true if broadcast messages should be listened for, false otherwise.
+     */
+    void setListenToBroadcasts(bool aFlag);
 
     /**
      * Converts a String of the form 1/2/3 into a 2 byte group address.
@@ -637,7 +657,7 @@ class KnxTpUart {
     /**
      * Read a telegram from BUS into the internal telegram buffer
      */
-    bool readKNXTelegram();
+    KnxTpUartSerialEventType readKNXTelegram();
 
     /**
      * Initialize the internal telegram buffer for a new message.
@@ -693,6 +713,7 @@ class KnxTpUart {
 
     /**
      * Read a single byte from serial interface with timeout.
+     * @return the read byte or -1 in case of timeout.
      */
     int serialRead();
 
