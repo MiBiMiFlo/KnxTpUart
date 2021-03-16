@@ -339,6 +339,12 @@ uint8_t KnxTelegram::getFirstDataByte() {
   return (buffer[7] & B00111111);
 }
 
+void KnxTelegram::setBool(bool aValue)
+{
+	setPayloadLength(2);
+	setFirstDataByte(aValue? 0x01 : 0x00);
+}
+
 bool KnxTelegram::getBool() {
   if (getPayloadLength() != 2) {
     // Wrong payload length
@@ -348,6 +354,13 @@ bool KnxTelegram::getBool() {
   return (getFirstDataByte() & B00000001);
 }
 
+void KnxTelegram::set4BitIntValue(uint8_t aValue)
+{
+	setPayloadLength(2);
+	setFirstDataByte((aValue & B00001111));
+}
+
+
 uint8_t KnxTelegram::get4BitIntValue() {
   if (getPayloadLength() != 2) {
     // Wrong payload length
@@ -355,6 +368,13 @@ uint8_t KnxTelegram::get4BitIntValue() {
   }
 
   return (getFirstDataByte() & B00001111);
+}
+
+
+void KnxTelegram::set4BitDim(bool aDirection, uint8_t aSteps)
+{
+	setPayloadLength(2);
+	setFirstDataByte(((aDirection & 0x01) << 3) | (aSteps & B00000111));
 }
 
 bool KnxTelegram::get4BitDirectionValue() {
@@ -696,4 +716,23 @@ void KnxTelegram::setValue(uint8_t* aBuffer, uint8_t aSize)
 
 	setPayloadLength(aSize+2);
 	memcpy(buffer+8, aBuffer, aSize);
+}
+
+
+void KnxTelegram::initKNXMessageFrame(uint16_t aSourceAddress, uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, bool aIsGA, uint8_t aFirstDataByte)
+{
+    clear();
+    setSourceAddress(aSourceAddress);
+    if (aIsGA)
+    {
+    	setTargetGroupAddress(aAddress);
+    }
+    else
+    {
+    	setTargetIndividualAddress(aAddress);
+    }
+    setFirstDataByte(aFirstDataByte);
+    setCommand(aCommand);
+    setPayloadLength(aPayloadLength);
+    createChecksum();
 }

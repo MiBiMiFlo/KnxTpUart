@@ -183,6 +183,18 @@ class KnxTelegram {
     void clear();
 
     /**
+	 * Initialize the internal telegram buffer for a new message.
+	 * This message initializes a telegram send to a group address.
+	 * @param aSourceAddress the source address for this telegram.
+	 * @param aPayloadLength the payload length
+	 * @param aCommand the command type
+	 * @param aAddress the target address.
+	 * @param aIsGA a flag to differentiate if aAddress is group or individual address.
+	 * @param aFirstDataByte the first data byte.
+	 */
+    void initKNXMessageFrame(uint16_t aSourceAddress, uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, bool aIsGA, uint8_t aFirstDataByte);
+
+    /**
      * Update the value of a single byte in the buffer.
      * This method does not perform an array bound check!
      * @param aIndex the offset in buffer to change.
@@ -393,14 +405,33 @@ class KnxTelegram {
     uint8_t getFirstDataByte();
 
     /**
+     * Set the payload data to be a 1 bit boolean value.
+     * @param aValue the value to set to payload.
+     */
+    void setBool(bool aValue);
+
+    /**
      * @return the payload data as boolean value.
      */
     bool getBool();
 
     /**
+     * Set the payload data to be a 4 bit int value.
+     * @param aValue the value to set to payload.
+     */
+    void set4BitIntValue(uint8_t aValue);
+
+    /**
      * @return the payload data as 4bit integer value.
      */
     uint8_t get4BitIntValue();
+
+    /**
+     * Set the payload data to be a 4 bit dimming value.
+     * @param aDirection the dimming direction.
+     * @param aSteps the step count.
+     */
+    void set4BitDim(bool aDirection, uint8_t aSteps);
 
     /**
      * @return the payload data as direction of a 4bit value.
