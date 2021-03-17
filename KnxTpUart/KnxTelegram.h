@@ -195,6 +195,11 @@ class KnxTelegram {
     void initKNXMessageFrame(uint16_t aSourceAddress, uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, bool aIsGA, uint8_t aFirstDataByte);
 
     /**
+     * Simple initiaalization for a group write to given GA.
+     */
+    void initGroupWrite(uint16_t aAddress);
+
+    /**
      * Update the value of a single byte in the buffer.
      * This method does not perform an array bound check!
      * @param aIndex the offset in buffer to change.

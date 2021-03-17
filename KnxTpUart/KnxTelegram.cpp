@@ -736,3 +736,10 @@ void KnxTelegram::initKNXMessageFrame(uint16_t aSourceAddress, uint8_t aPayloadL
     setPayloadLength(aPayloadLength);
     createChecksum();
 }
+
+void KnxTelegram::initGroupWrite(uint16_t aAddress)
+{
+	clear();
+	setTargetGroupAddress(aAddress);
+	setCommand(KNX_COMMAND_WRITE);
+}
