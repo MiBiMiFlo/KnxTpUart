@@ -22,6 +22,8 @@
 
 #define TPUART_DATA_END B01000000
 
+#define TPUART_SET_ADDRESS B00101000
+
 #define TPUART_SEND_SUCCESS B10001011
 
 #define TPUART_SEND_NOT_SUCCESS B00001011
@@ -37,33 +39,95 @@
 // Uncomment the following line to enable debugging
 //#define TPUART_DEBUG
 
-#define TPUART_DEBUG_PORT Serial
+// define TPUART_DEBUG_V for verbose debug messages
+//#define TPUART_DEBUG_V
 
+#ifdef TPUART_DEBUG
+	#define DBG_PRINT(aMsg) ({if (_dbg != NULL) {_dbg->print(aMsg);}})
+	#define DBG_PRINTLN(aMsg) ({if (_dbg != NULL) {_dbg->println(aMsg);}})
+#else
+	#define DBG_PRINT(aMsg) ({})
+	#define DBG_PRINTLN(aMsg) ({})
+#endif
 
-// Delay in ms between sending of packets to the bus
-// Change only if you know what you're doing
-//#define SERIAL_WRITE_DELAY_MS 100
 
 // Timeout for reading a byte from TPUART
 // Change only if you know what you're doing
 #define SERIAL_READ_TIMEOUT_MS 10
 
+#define SERIAL_READ_TELEGRAM_TIMEOUT_MS 10
+
+// timeout when waiting for ACK from TPUART
+#define SERIAL_WAIT_ACK_TIMEOUT_MS 500
+
 // If KNX_SUPPORT_LISTEN_GAS is defined listening GAs can be added.
-#define KNX_SUPPORT_LISTEN_GAS
+//#define KNX_SUPPORT_LISTEN_GAS
+
+/*
+ * Some config flags related to wait for a response by TPUART
+ */
+
+// Wait for a KNX telegram send confirmation.
+#define CONFIG_WAIT_FOR_SEND_CONFIRM    B00000001
+// Wait for a RESET confirmation.
+#define CONFIG_WAIT_FOR_RESET_CONFIRMED B00000010
+// Wait for a STATE response.
+#define CONFIG_WAIT_FOR_STATE_RESPONSE  B00000100
+
+
+#define STATUS_DATA_SEND_SUCCESS        B00000001
+#define STATUS_DATA_SEND_NOT_SUCCESS    B00000010
+#define STATUS_DATA_SEND_TIMEOUT        B00000100
+#define STATUS_RESET_CONFIRMED          B00001000
+#define STATUS_STATE_RESPONSE_RECEIVED  B00010000
+
+
 
 /**
- * Definition of callback function type to allow application to check if telegram is of interest
+ * The result type for sendTelegram and related functions.
  */
-typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
+enum KnxTpUartSendResult
+{
+	SEND_SUCCESSFUL=0,
+	SEND_NOT_SUCCESSFUL=1,
+	SEND_TIMEOUT=-1
+};
 
 enum KnxTpUartSerialEventType
 {
-  TPUART_RESET_INDICATION,
+  NO_DATA,
   KNX_TELEGRAM,
+  TPUART_RESET_INDICATION,
+  TPUART_STATE_RESPONSE,
   IRRELEVANT_KNX_TELEGRAM,
+  TPUART_RESPONSE_SEND_NOT_SUCCESS,
+  TPUART_RESPONSE_SEND_SUCCESS,
   TIMEOUT,
   UNKNOWN
 };
+
+/**
+ * Definition of callback function type to allow application to check if telegram is of interest.
+ * This callback is called after only the first 6 bytes are received and has to return asap (within ~1ms).
+ * The result is used to determine if ACK or NACK is returned.
+ */
+typedef bool (*KnxTelegramCheckType)(KnxTelegram *aTelegram);
+
+
+/**
+ * Callback type for serial event callback.
+ * @param aEventType the event type that was encountered.
+ * @param aTpUartByte the byte from TpUart that caused the event. This is only of interest for UNKNOWN event.
+ */
+typedef void (*KnxSerialEventCallback)(KnxTpUartSerialEventType aEventType, uint8_t aTpUartByte);
+
+/*
+ * This type is used in the callback for new telegrams.
+ * @param aTelegram the new received KNX telegram
+ * @param aIsInteresting if the telegram was considered to be of interest before this is true, otherwise false.
+ */
+typedef void (*KnxTelegramCallback)(KnxTelegram *aTelegram, bool aIsInteresting);
+
 
 class KnxTpUart {
 
@@ -86,20 +150,31 @@ class KnxTpUart {
     /**
      * Perform a UART connection reset.
      * This method sends a 0x01 to the UART port.
+     * @param aTimeout the number of milliseconds to wait for a response.
+     * @return true if reset was successful (reset response received within timeout).
      */
-    void uartReset();
+    bool uartReset(uint16_t aTimeout);
 
     /**
      * Perform a state request on UART module.
      * This method sends a 0x02 to the UART.
+     * @param aTimeout the number of milliseconds to wait for a response.
+     * @return the received response of 0 if no response was received within timeout.
      */
-    void uartStateRequest();
+    uint8_t uartStateRequest(uint16_t aTimeout);
+
+    void uartSetAddress();
+
+    /**
+     * @return the last value received as response to a STATE request.
+     */
+    uint8_t getStateResponse();
 
     /**
      * Has to be called to fetch a telegram from the UART communication port.
      * @return a enum value to indicate if a KNX telegram of interest can be read or not.
      */
-    KnxTpUartSerialEventType serialEvent();
+    void serialEvent();
 
     /**
      * Retrieve the current telegram for further processing.
@@ -121,15 +196,8 @@ class KnxTpUart {
      */
     void setIndividualAddress(uint16_t aAddress);
 
-    /**
-     * Send an ACK byte to the UART.
-     */
-    void sendAck();
 
-    /**
-     * Send a NOT_ADDRESSED byte to the UART.
-     */
-    void sendNotAddressed();
+    uint16_t getIndividualAddress();
 
     /**
      * Send a boolean (1bit) value to a group address.
@@ -139,7 +207,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswerBool
      */
-    bool groupWriteBool(String aAddress, bool aValue);
+    KnxTpUartSendResult groupWriteBool(String aAddress, bool aValue);
 
     /**
      * Send a boolean (1bit) value to a group address.
@@ -149,7 +217,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswerBool
      */
-    bool groupWriteBool(uint16_t aAddress, bool aValue);
+    KnxTpUartSendResult groupWriteBool(uint16_t aAddress, bool aValue);
 
     /**
      * Send a 4bit value to a group address.
@@ -159,7 +227,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitInt
      */
-    bool groupWrite4BitInt(String aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupWrite4BitInt(String aAddress, uint8_t aValue);
 
     /**
      * Send a 4bit value to a group address.
@@ -169,7 +237,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitInt
      */
-    bool groupWrite4BitInt(uint16_t aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupWrite4BitInt(uint16_t aAddress, uint8_t aValue);
 
     /**
      * Send a boolean + 3 bit value (DPT-3) to a group address.
@@ -179,7 +247,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitDim
      */
-    bool groupWrite4BitDim(String aAddress, bool aDirection, uint8_t aSteps);
+    KnxTpUartSendResult groupWrite4BitDim(String aAddress, bool aDirection, uint8_t aSteps);
 
     /**
      * Send a boolean + 3 bit value (DPT-3) to a group address.
@@ -189,7 +257,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitDim
      */
-    bool groupWrite4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps);
+    KnxTpUartSendResult groupWrite4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps);
 
     /**
 	 * Send a 8bit signed integer value to a group address.
@@ -198,7 +266,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer1ByteInt
 	 */
-    bool groupWrite1ByteInt(String aAddress, int8_t aValue);
+    KnxTpUartSendResult groupWrite1ByteInt(String aAddress, int8_t aValue);
 
     /**
 	 * Send a 8bit signed integer value to a group address.
@@ -207,7 +275,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer1ByteInt
 	 */
-    bool groupWrite1ByteInt(uint16_t aAddress, int8_t aValue);
+    KnxTpUartSendResult groupWrite1ByteInt(uint16_t aAddress, int8_t aValue);
 
     /**
 	 * Send a 8bit unsigned integer value to a group address.
@@ -216,7 +284,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer1ByteUInt
 	 */
-    bool groupWrite1ByteUInt(String aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupWrite1ByteUInt(String aAddress, uint8_t aValue);
 
     /**
 	 * Send a 8bit unsigned integer value to a group address.
@@ -225,7 +293,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer1ByteUInt
 	 */
-    bool groupWrite1ByteUInt(uint16_t aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupWrite1ByteUInt(uint16_t aAddress, uint8_t aValue);
 
     /**
 	 * Send a 16bit signed integer value to a group address.
@@ -234,7 +302,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer2ByteUInt
 	 */
-    bool groupWrite2ByteInt(String aAddress, int16_t aValue);
+    KnxTpUartSendResult groupWrite2ByteInt(String aAddress, int16_t aValue);
 
     /**
 	 * Send a 16bit signed integer value to a group address.
@@ -243,7 +311,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer2ByteInt
 	 */
-    bool groupWrite2ByteInt(uint16_t aAddress, int16_t aValue);
+    KnxTpUartSendResult groupWrite2ByteInt(uint16_t aAddress, int16_t aValue);
 
     /**
 	 * Send a 16bit unsigned integer value to a group address.
@@ -251,7 +319,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite2ByteUInt(String aAddress, uint16_t aValue);
+    KnxTpUartSendResult groupWrite2ByteUInt(String aAddress, uint16_t aValue);
 
     /**
 	 * Send a 16bit unsigned integer value to a group address.
@@ -259,7 +327,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite2ByteUInt(uint16_t aAddress, uint16_t aValue);
+    KnxTpUartSendResult groupWrite2ByteUInt(uint16_t aAddress, uint16_t aValue);
 
     /**
 	 * Send a 32bit signed integer value to a group address.
@@ -268,7 +336,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer4ByteInt
 	 */
-    bool groupWrite4ByteInt(uint16_t aAddress, int32_t aValue);
+    KnxTpUartSendResult groupWrite4ByteInt(uint16_t aAddress, int32_t aValue);
     /**
 	 * Send a 32bit unsigned integer value to a group address.
 	 * @param aAddress the address to write to.
@@ -276,7 +344,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer4ByteUInt
 	 */
-    bool groupWrite4ByteUInt(uint16_t aAddress, uint32_t aValue);
+    KnxTpUartSendResult groupWrite4ByteUInt(uint16_t aAddress, uint32_t aValue);
 
     /**
 	 * Send a 16bit float value to a group address.
@@ -284,7 +352,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite2ByteFloat(String aAddress, float aValue);
+    KnxTpUartSendResult groupWrite2ByteFloat(String aAddress, float aValue);
 
     /**
 	 * Send a 16bit float value to a group address.
@@ -292,7 +360,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite2ByteFloat(uint16_t aAddress, float aValue);
+    KnxTpUartSendResult groupWrite2ByteFloat(uint16_t aAddress, float aValue);
 
     /**
      * Send a 3 byte value of DPT 10 containing the time.
@@ -303,7 +371,7 @@ class KnxTpUart {
      * @param aSecond the second
      * @return true if writing was successful, false otherwise.
      */
-    bool groupWrite3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+    KnxTpUartSendResult groupWrite3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
 
     /**
      * Send a 3 byte value of DPT 10 (time).
@@ -314,7 +382,7 @@ class KnxTpUart {
      * @param aSecond the second.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupWrite3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+    KnxTpUartSendResult groupWrite3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
 
     /**
      * Send a 3 byte value of DPT 11 (date).
@@ -324,7 +392,7 @@ class KnxTpUart {
      * @param aYear the year.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupWrite3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+    KnxTpUartSendResult groupWrite3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
     /**
      * Send a 3 byte value of DPT 11 (date).
@@ -334,7 +402,7 @@ class KnxTpUart {
      * @param aYear the year.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupWrite3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+    KnxTpUartSendResult groupWrite3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
     /**
 	 * Send a 32bit float value to a group address.
@@ -342,14 +410,14 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite4ByteFloat(String aAddress, float aValue);
+    KnxTpUartSendResult groupWrite4ByteFloat(String aAddress, float aValue);
     /**
 	 * Send a 32bit float value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite4ByteFloat(uint16_t aAddress, float aValue);
+    KnxTpUartSendResult groupWrite4ByteFloat(uint16_t aAddress, float aValue);
 
     /**
 	 * Send a 14 byte text value to a group address.
@@ -357,7 +425,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite14ByteText(String aAddress, String aValue);
+    KnxTpUartSendResult groupWrite14ByteText(String aAddress, String aValue);
 
     /**
 	 * Send a 14 byte text value to a group address.
@@ -365,7 +433,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupWrite14ByteText(uint16_t aAddress, String aValue);
+    KnxTpUartSendResult groupWrite14ByteText(uint16_t aAddress, String aValue);
 
     /**
      * Send a buffer to a group address.
@@ -374,7 +442,7 @@ class KnxTpUart {
      * @param aSize the number of bytes to send from buffer.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
+    KnxTpUartSendResult groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
 
     /**
 	 * Send a boolean (1bit) value to a group address.
@@ -384,7 +452,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWriteBool
 	 */
-    bool groupAnswerBool(String aAddress, bool aValue);
+    KnxTpUartSendResult groupAnswerBool(String aAddress, bool aValue);
 
     /**
 	 * Send a boolean (1bit) answer to a group address.
@@ -394,7 +462,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWriteBool
 	 */
-    bool groupAnswerBool(uint16_t aAddress, bool aValue);
+    KnxTpUartSendResult groupAnswerBool(uint16_t aAddress, bool aValue);
 
     /**
      * Send a 4bit answer to a group address.
@@ -404,7 +472,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitInt
      */
-    bool groupAnswer4BitInt(String, uint8_t aValue);
+    KnxTpUartSendResult groupAnswer4BitInt(String, uint8_t aValue);
 
     /**
      * Send a 4bit answer to a group address.
@@ -414,7 +482,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitInt
      */
-    bool groupAnswer4BitInt(uint16_t, uint8_t aValue);
+    KnxTpUartSendResult groupAnswer4BitInt(uint16_t, uint8_t aValue);
 
     /**
      * Send a boolean + 3 bit answer (DPT-3) to a group address.
@@ -424,7 +492,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitDim
      */
-    bool groupAnswer4BitDim(String, bool aDirection, uint8_t aSteps);
+    KnxTpUartSendResult groupAnswer4BitDim(String, bool aDirection, uint8_t aSteps);
 
     /**
      * Send a boolean + 3 bit answer (DPT-3) to a group address.
@@ -434,7 +502,7 @@ class KnxTpUart {
      * @return true if writing was successful, false otherwise.
      * @see #groupWrite4BitDim
      */
-    bool groupAnswer4BitDim(uint16_t, bool aDirection, uint8_t aSteps);
+    KnxTpUartSendResult groupAnswer4BitDim(uint16_t, bool aDirection, uint8_t aSteps);
 
     /**
 	 * Send a 8bit signed integer answer to a group address.
@@ -443,7 +511,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite1ByteInt
 	 */
-    bool groupAnswer1ByteInt(String aAddress, int8_t aValue);
+    KnxTpUartSendResult groupAnswer1ByteInt(String aAddress, int8_t aValue);
 
     /**
 	 * Send a 8bit signed integer answer to a group address.
@@ -452,7 +520,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite1ByteInt
 	 */
-    bool groupAnswer1ByteInt(uint16_t aAddress, int8_t aValue);
+    KnxTpUartSendResult groupAnswer1ByteInt(uint16_t aAddress, int8_t aValue);
 
     /**
 	 * Send a 8bit unsigned integer answer to a group address.
@@ -461,7 +529,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite1ByteUInt
 	 */
-    bool groupAnswer1ByteUInt(String aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupAnswer1ByteUInt(String aAddress, uint8_t aValue);
     /**
 	 * Send a 8bit unsigned integer answer to a group address.
 	 * @param aAddress the address to write to.
@@ -469,7 +537,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite1ByteUInt
 	 */
-    bool groupAnswer1ByteUInt(uint16_t aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupAnswer1ByteUInt(uint16_t aAddress, uint8_t aValue);
 
     /**
 	 * Send a 16bit signed integer answer to a group address.
@@ -478,7 +546,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteInt
 	 */
-    bool groupAnswer2ByteInt(String aAddress, int16_t aValue);
+    KnxTpUartSendResult groupAnswer2ByteInt(String aAddress, int16_t aValue);
     /**
 	 * Send a 16bit signed integer answer to a group address.
 	 * @param aAddress the address to write to.
@@ -486,7 +554,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteInt
 	 */
-    bool groupAnswer2ByteInt(uint16_t aAddress, int16_t aValue);
+    KnxTpUartSendResult groupAnswer2ByteInt(uint16_t aAddress, int16_t aValue);
 
     /**
 	 * Send a 16bit unsigned integer answer to a group address.
@@ -495,7 +563,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteUInt
 	 */
-    bool groupAnswer2ByteUInt(String aAddress, uint16_t aValue);
+    KnxTpUartSendResult groupAnswer2ByteUInt(String aAddress, uint16_t aValue);
 
     /**
 	 * Send a 16bit unsigned integer answer to a group address.
@@ -504,7 +572,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteUInt
 	 */
-    bool groupAnswer2ByteUInt(uint16_t aAddress, uint16_t aValue);
+    KnxTpUartSendResult groupAnswer2ByteUInt(uint16_t aAddress, uint16_t aValue);
 
     /**
 	 * Send a 32bit signed integer answer to a group address.
@@ -513,7 +581,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteInt
 	 */
-    bool groupAnswer4ByteInt(uint16_t aAddress, int32_t aValue);
+    KnxTpUartSendResult groupAnswer4ByteInt(uint16_t aAddress, int32_t aValue);
 
     /**
 	 * Send a 32bit unsigned integer answer to a group address.
@@ -522,7 +590,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite4ByteUInt
 	 */
-    bool groupAnswer4ByteUInt(uint16_t aAddress, uint32_t aValue);
+    KnxTpUartSendResult groupAnswer4ByteUInt(uint16_t aAddress, uint32_t aValue);
 
     /**
 	 * Send a 16bit float answer to a group address.
@@ -531,7 +599,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteFloat
 	 */
-    bool groupAnswer2ByteFloat(String aAddress, float aValue);
+    KnxTpUartSendResult groupAnswer2ByteFloat(String aAddress, float aValue);
 
     /**
 	 * Send a 16bit float answer to a group address.
@@ -540,7 +608,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite2ByteFloat
 	 */
-    bool groupAnswer2ByteFloat(uint16_t aAddress, float aValue);
+    KnxTpUartSendResult groupAnswer2ByteFloat(uint16_t aAddress, float aValue);
 
     /**
 	 * Send a 3 byte answer of DPT 10 (time).
@@ -551,7 +619,7 @@ class KnxTpUart {
 	 * @param aSecond the second.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupAnswer3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+    KnxTpUartSendResult groupAnswer3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
 
     /**
 	 * Send a 3 byte answer of DPT 10 (time).
@@ -562,7 +630,7 @@ class KnxTpUart {
 	 * @param aSecond the second.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupAnswer3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+    KnxTpUartSendResult groupAnswer3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
 
     /**
      * Send a 3 byte value of DPT 11 (date).
@@ -572,7 +640,7 @@ class KnxTpUart {
      * @param aYear the year.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupAnswer3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+    KnxTpUartSendResult groupAnswer3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
     /**
      * Send a 3 byte value of DPT 11 (date).
@@ -582,7 +650,7 @@ class KnxTpUart {
      * @param aYear the year.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupAnswer3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+    KnxTpUartSendResult groupAnswer3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
 
     /**
 	 * Send a 32bit float answer to a group address.
@@ -591,7 +659,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite4ByteFloat
 	 */
-    bool groupAnswer4ByteFloat(String aAddress, float aValue);
+    KnxTpUartSendResult groupAnswer4ByteFloat(String aAddress, float aValue);
 
     /**
 	 * Send a 32bit float answer to a group address.
@@ -600,7 +668,7 @@ class KnxTpUart {
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupWrite4ByteFloat
 	 */
-    bool groupAnswer4ByteFloat(uint16_t aAddress, float aValue);
+    KnxTpUartSendResult groupAnswer4ByteFloat(uint16_t aAddress, float aValue);
 
     /**
 	 * Send a 14 byte text answer to a group address.
@@ -608,7 +676,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupAnswer14ByteText(String aAddress, String aValue);
+    KnxTpUartSendResult groupAnswer14ByteText(String aAddress, String aValue);
 
     /**
 	 * Send a 14 byte text answer to a group address.
@@ -616,7 +684,7 @@ class KnxTpUart {
 	 * @param aValue the value to send.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool groupAnswer14ByteText(uint16_t aAddress, String aValue);
+    KnxTpUartSendResult groupAnswer14ByteText(uint16_t aAddress, String aValue);
 
     /**
      * Send a buffer to a group address.
@@ -625,7 +693,7 @@ class KnxTpUart {
      * @param aSize the number of bytes to send from buffer.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupAnswerBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
+    KnxTpUartSendResult groupAnswerBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
 
     // Start of definitions for uint16_t address functions
 
@@ -636,7 +704,7 @@ class KnxTpUart {
      * @param aAddress the address to request an answer from.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupRead(String aAddress);
+    KnxTpUartSendResult groupRead(String aAddress);
 
     /**
      * Request an answer for the actual value of a group address.
@@ -645,25 +713,25 @@ class KnxTpUart {
      * @param aAddress the address to request an answer from.
      * @return true if writing was successful, false otherwise.
      */
-    bool groupRead(uint16_t aAddress);
+    KnxTpUartSendResult groupRead(uint16_t aAddress);
 
     /**
      * Send a KNX telegram with command KNX_COMMAND_INDIVIDUAL_ADDR_RESPONSE.
      * @return true if writing was successful, false otherwise.
      */
-    bool individualAnswerAddress();
+    KnxTpUartSendResult individualAnswerAddress();
 
     /**
      * Send a KNX telegram with command KNX_COMMAND_MASK_VERSION_RESPONSE.
      * @return true if writing was successful, false otherwise.
      */
-    bool individualAnswerMaskVersion(uint8_t aArea, uint8_t aLine, uint8_t aMember);
+    KnxTpUartSendResult individualAnswerMaskVersion(uint8_t aArea, uint8_t aLine, uint8_t aMember);
 
     /**
      * Send a KNX telegram with command KNX_COMMAND_MASK_VERSION_RESPONSE.
      * @return true if writing was successful, false otherwise.
      */
-    bool individualAnswerMaskVersion(uint16_t);
+    KnxTpUartSendResult individualAnswerMaskVersion(uint16_t);
 
     /**
      * Send a KNX telegram with command KNX_COMMAND_ESCAPE and KNX_EXT_COMMAND_AUTH_RESPONSE as data.
@@ -674,7 +742,7 @@ class KnxTpUart {
      * @param aMember the member part of the target address.
      * @return true if writing was successful, false otherwise.
      */
-    bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint8_t aArea, uint8_t aLine, uint8_t aMember);
+    KnxTpUartSendResult individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint8_t aArea, uint8_t aLine, uint8_t aMember);
 
     /**
 	 * Send a KNX telegram with command KNX_COMMAND_ESCAPE and KNX_EXT_COMMAND_AUTH_RESPONSE as data.
@@ -683,7 +751,7 @@ class KnxTpUart {
 	 * @param aAddress the target address.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    bool individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint16_t aAddress);
+    KnxTpUartSendResult individualAnswerAuth(uint8_t aAccessLevel, uint8_t aSequenceNo, uint16_t aAddress);
 
 
     /**
@@ -714,11 +782,26 @@ class KnxTpUart {
     void setTelegramCheckCallback(KnxTelegramCheckType aCallback);
 
     /**
+     * Used to set a callback that is to receive serial events.
+     */
+    void setSerialEventCallback(KnxSerialEventCallback aCallback);
+
+    void setKnxTelegramCallback(KnxTelegramCallback aCallback);
+
+    /**
      * Send the given telegram to bus.
      * @param aTelegram the telegram to send.
      * @return true if send (and receive) was successful, false otherwise.
      */
-    bool sendTelegram(KnxTelegram* aTelegram);
+    KnxTpUartSendResult sendTelegram(KnxTelegram* aTelegram);
+
+    /**
+	 * Send the given telegram to bus and repeat up to aCount times on failure.
+	 * @param aTelegram the telegram to send.
+	 * @param aCount the maximum number of repeats.
+	 * @return true if send (and receive) was successful, false otherwise.
+	 */
+    KnxTpUartSendResult sendTelegramAndRepeat(KnxTelegram* aTelegram, uint8_t aCount);
 
 #ifdef KNX_SUPPORT_LISTEN_GAS
 
@@ -763,8 +846,12 @@ class KnxTpUart {
      */
     bool setListenAddressCount(uint8_t aCount);
 
+
 #endif
 
+#ifdef TPUART_DEBUG
+    void setDebugPort(Stream * aStream);
+#endif
   private:
 
     /**
@@ -812,14 +899,38 @@ class KnxTpUart {
     KnxTelegramCheckType mTelegramCheckCallback;
 
     /**
+     * This callback is called in case of a new serial event.
+     */
+    KnxSerialEventCallback mSerialEventCallback;
+
+    /**
+     * This callback is called in case a new KNX telegram was received.
+     */
+    KnxTelegramCallback mKnxTelegramCallback;
+
+    /**
+     * The value of the last received state response.
+     */
+    uint8_t mStateResponse;
+
+    /**
+     * A 8bit register storing current config flags (waiting for specific results).
+     */
+    uint8_t mConfigReg;
+
+    /**
+     * A 8 bit status register where response results are set.
+     */
+    uint8_t mStatusReg;
+
+
+#ifdef TPUART_DEBUG
+    Stream* _dbg;
+#endif
+    /**
      * Internal initialization, called from each constructor.
      */
     void init(void);
-
-    /**
-     * @return true if the given byte is a control byte.
-     */
-    bool isKNXControlByte(uint8_t aByte);
 
     /**
      * Check for errors in USART control registers.
@@ -877,23 +988,42 @@ class KnxTpUart {
     void createKNXMessageFrameIndividual(uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, uint8_t aFirstDataByte);
 
     /**
-     * Send the a KNX message from internal telegram buffer.
-     */
-    bool sendMessage();
-
-    /**
      * Send a confirm message to the given address.
      * @param aSequenceNo the sequence no of the telegram to confirm.
      * @param aAddress the source address of the telegram to confirm.
      */
-    bool sendNCDPosConfirm(uint8_t aSequenceNo, uint16_t aAddress);
+    KnxTpUartSendResult sendNCDPosConfirm(uint8_t aSequenceNo, uint16_t aAddress);
 
     /**
      * Read a single byte from serial interface with timeout.
+     * @param aTimeout the timeout in ms to wait for a byte to get available on serial.
      * @return the read byte or -1 in case of timeout.
      */
-    int serialRead();
+    int serialRead(uint16_t aTimeout);
 
+    /**
+     * This method handles the ACK response on receive.
+     * @return true if the telegram is of interest (ACK was send) or false if telegram is not of interest (NACK was send).
+     */
+    bool handleAck();
+
+    /**
+     * Send the given telegram to bus.
+     * @param aTelegram the telegram to send.
+     * @param aIsRepeat a flag to indicate if this is a repeated send.
+     * @return true if send (and receive) was successful, false otherwise.
+     */
+    KnxTpUartSendResult sendTelegram(KnxTelegram* aTelegram, bool aIsRepeat);
+
+    /**
+     * Internal function used to wait for a send result while still reading serial data.
+     */
+    KnxTpUartSendResult waitForSendResult();
+
+    /**
+     * Internal function that checks if #mSerialEventCallback is given and if so sends the given
+     */
+    void sendSerialEventCallback(KnxTpUartSerialEventType aEventType, uint8_t aTpUartByte);
 
 };
 
