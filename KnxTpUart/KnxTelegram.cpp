@@ -502,9 +502,9 @@ uint32_t KnxTelegram::get4ByteUIntValue() {
   }
   //TODO: check if this is correct
   uint32_t value = buffer[8];
-  value = value << 8 + buffer[9];
-  value = value << 8 + buffer[10];
-  value = value << 8 + buffer[11];
+  value = (value << 8) | buffer[9];
+  value = (value << 8) | buffer[10];
+  value = (value << 8) | buffer[11];
 
   return (value);
 }
