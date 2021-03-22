@@ -138,13 +138,6 @@ class KnxTpUart {
 	 * @param aPort the communication port.
 	 * @param aAddress The source address to use.
 	 */
-    KnxTpUart(Stream* aPort, String aAddress);
-
-	/**
-	 * Create a new instance.
-	 * @param aPort the communication port.
-	 * @param aAddress The source address to use.
-	 */
     KnxTpUart(Stream*, uint16_t);
 
     /**
@@ -196,7 +189,10 @@ class KnxTpUart {
      */
     void setIndividualAddress(uint16_t aAddress);
 
-
+    /**
+     * @return the individual address of this instance.
+     * This is the source address enforced on all telegrams send.
+     */
     uint16_t getIndividualAddress();
 
     /**
@@ -204,174 +200,99 @@ class KnxTpUart {
      * This can be used for DPT-1.
      * @param aAddress the address to write to.
      * @param aValue the value to write.
+     * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
      * @return true if writing was successful, false otherwise.
-     * @see #groupAnswerBool
      */
-    KnxTpUartSendResult groupWriteBool(String aAddress, bool aValue);
-
-    /**
-     * Send a boolean (1bit) value to a group address.
-     * This can be used for DPT-1.
-     * @param aAddress the address to write to.
-     * @param aValue the value to write.
-     * @return true if writing was successful, false otherwise.
-     * @see #groupAnswerBool
-     */
-    KnxTpUartSendResult groupWriteBool(uint16_t aAddress, bool aValue);
+    KnxTpUartSendResult groupWriteBool(uint16_t aAddress, bool aValue, boolean aIsAnswer = false);
 
     /**
      * Send a 4bit value to a group address.
      * This can be used for DPT-2 or DPT-3.
      * @param aAddress the address to write to.
      * @param aValue the value to write.
+     * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitInt
      */
-    KnxTpUartSendResult groupWrite4BitInt(String aAddress, uint8_t aValue);
-
-    /**
-     * Send a 4bit value to a group address.
-     * This can be used for DPT-2 or DPT-3.
-     * @param aAddress the address to write to.
-     * @param aValue the value to write.
-     * @return true if writing was successful, false otherwise.
-     * @see #groupAnswer4BitInt
-     */
-    KnxTpUartSendResult groupWrite4BitInt(uint16_t aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupWrite4BitInt(uint16_t aAddress, uint8_t aValue, boolean aIsAnswer = false);
 
     /**
      * Send a boolean + 3 bit value (DPT-3) to a group address.
      * @param aAddress the address to write to.
      * @param aDirection (1vit value).
      * @param aSteps (3bit value)
+     * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
      * @return true if writing was successful, false otherwise.
      * @see #groupAnswer4BitDim
      */
-    KnxTpUartSendResult groupWrite4BitDim(String aAddress, bool aDirection, uint8_t aSteps);
-
-    /**
-     * Send a boolean + 3 bit value (DPT-3) to a group address.
-     * @param aAddress the address to write to.
-     * @param aDirection (1vit value).
-     * @param aSteps (3bit value)
-     * @return true if writing was successful, false otherwise.
-     * @see #groupAnswer4BitDim
-     */
-    KnxTpUartSendResult groupWrite4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps);
+    KnxTpUartSendResult groupWrite4BitDim(uint16_t aAddress, bool aDirection, uint8_t aSteps, boolean aIsAnswer = false);
 
     /**
 	 * Send a 8bit signed integer value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer1ByteInt
 	 */
-    KnxTpUartSendResult groupWrite1ByteInt(String aAddress, int8_t aValue);
-
-    /**
-	 * Send a 8bit signed integer value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupAnswer1ByteInt
-	 */
-    KnxTpUartSendResult groupWrite1ByteInt(uint16_t aAddress, int8_t aValue);
+    KnxTpUartSendResult groupWrite1ByteInt(uint16_t aAddress, int8_t aValue, boolean aIsAnswer = false);
 
     /**
 	 * Send a 8bit unsigned integer value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer1ByteUInt
 	 */
-    KnxTpUartSendResult groupWrite1ByteUInt(String aAddress, uint8_t aValue);
-
-    /**
-	 * Send a 8bit unsigned integer value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupAnswer1ByteUInt
-	 */
-    KnxTpUartSendResult groupWrite1ByteUInt(uint16_t aAddress, uint8_t aValue);
+    KnxTpUartSendResult groupWrite1ByteUInt(uint16_t aAddress, uint8_t aValue, boolean aIsAnswer = false);
 
     /**
 	 * Send a 16bit signed integer value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupAnswer2ByteUInt
-	 */
-    KnxTpUartSendResult groupWrite2ByteInt(String aAddress, int16_t aValue);
-
-    /**
-	 * Send a 16bit signed integer value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer2ByteInt
 	 */
-    KnxTpUartSendResult groupWrite2ByteInt(uint16_t aAddress, int16_t aValue);
+    KnxTpUartSendResult groupWrite2ByteInt(uint16_t aAddress, int16_t aValue, boolean aIsAnswer = false);
 
     /**
 	 * Send a 16bit unsigned integer value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    KnxTpUartSendResult groupWrite2ByteUInt(String aAddress, uint16_t aValue);
-
-    /**
-	 * Send a 16bit unsigned integer value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupWrite2ByteUInt(uint16_t aAddress, uint16_t aValue);
+    KnxTpUartSendResult groupWrite2ByteUInt(uint16_t aAddress, uint16_t aValue, boolean aIsAnswer = false);
 
     /**
 	 * Send a 32bit signed integer value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer4ByteInt
 	 */
-    KnxTpUartSendResult groupWrite4ByteInt(uint16_t aAddress, int32_t aValue);
+    KnxTpUartSendResult groupWrite4ByteInt(uint16_t aAddress, int32_t aValue, boolean aIsAnswer = false);
     /**
 	 * Send a 32bit unsigned integer value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 * @see #groupAnswer4ByteUInt
 	 */
-    KnxTpUartSendResult groupWrite4ByteUInt(uint16_t aAddress, uint32_t aValue);
+    KnxTpUartSendResult groupWrite4ByteUInt(uint16_t aAddress, uint32_t aValue, boolean aIsAnswer = false);
 
     /**
 	 * Send a 16bit float value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    KnxTpUartSendResult groupWrite2ByteFloat(String aAddress, float aValue);
-
-    /**
-	 * Send a 16bit float value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupWrite2ByteFloat(uint16_t aAddress, float aValue);
-
-    /**
-     * Send a 3 byte value of DPT 10 containing the time.
-     * @param aAddress the address to write to.
-     * @param aWeekday the day of the week
-     * @param aHour the hour
-     * @param aMinute the minute
-     * @param aSecond the second
-     * @return true if writing was successful, false otherwise.
-     */
-    KnxTpUartSendResult groupWrite3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+    KnxTpUartSendResult groupWrite2ByteFloat(uint16_t aAddress, float aValue, boolean aIsAnswer = false);
 
     /**
      * Send a 3 byte value of DPT 10 (time).
@@ -380,9 +301,10 @@ class KnxTpUart {
      * @param aHour the hour.
      * @param aMinute the minute.
      * @param aSecond the second.
+     * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
      * @return true if writing was successful, false otherwise.
      */
-    KnxTpUartSendResult groupWrite3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
+    KnxTpUartSendResult groupWrite3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond, boolean aIsAnswer = false);
 
     /**
      * Send a 3 byte value of DPT 11 (date).
@@ -390,321 +312,38 @@ class KnxTpUart {
      * @param aDay the day of the month.
      * @param aMonth the month of the year.
      * @param aYear the year.
+     * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
      * @return true if writing was successful, false otherwise.
      */
-    KnxTpUartSendResult groupWrite3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
-
-    /**
-     * Send a 3 byte value of DPT 11 (date).
-     * @param aAddress the address to write to.
-     * @param aDay the day of the month.
-     * @param aMonth the month of the year.
-     * @param aYear the year.
-     * @return true if writing was successful, false otherwise.
-     */
-    KnxTpUartSendResult groupWrite3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
+    KnxTpUartSendResult groupWrite3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear, boolean aIsAnswer = false);
 
     /**
 	 * Send a 32bit float value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    KnxTpUartSendResult groupWrite4ByteFloat(String aAddress, float aValue);
-    /**
-	 * Send a 32bit float value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupWrite4ByteFloat(uint16_t aAddress, float aValue);
+    KnxTpUartSendResult groupWrite4ByteFloat(uint16_t aAddress, float aValue, boolean aIsAnswer = false);
 
     /**
 	 * Send a 14 byte text value to a group address.
 	 * @param aAddress the address to write to.
 	 * @param aValue the value to send.
+	 * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
 	 * @return true if writing was successful, false otherwise.
 	 */
-    KnxTpUartSendResult groupWrite14ByteText(String aAddress, String aValue);
-
-    /**
-	 * Send a 14 byte text value to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupWrite14ByteText(uint16_t aAddress, String aValue);
+    KnxTpUartSendResult groupWrite14ByteText(uint16_t aAddress, String aValue, boolean aIsAnswer = false);
 
     /**
      * Send a buffer to a group address.
      * @param aAddress the address to write to.
      * @param aBuffer the buffer to send.
      * @param aSize the number of bytes to send from buffer.
+     * @param aIsAnswer if true the telegram will be send as ANSWER, if false as WRITE.
      * @return true if writing was successful, false otherwise.
      */
-    KnxTpUartSendResult groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
-
-    /**
-	 * Send a boolean (1bit) value to a group address.
-	 * This can be used for DPT-1.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to write.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWriteBool
-	 */
-    KnxTpUartSendResult groupAnswerBool(String aAddress, bool aValue);
-
-    /**
-	 * Send a boolean (1bit) answer to a group address.
-	 * This can be used for DPT-1.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to write.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWriteBool
-	 */
-    KnxTpUartSendResult groupAnswerBool(uint16_t aAddress, bool aValue);
-
-    /**
-     * Send a 4bit answer to a group address.
-     * This can be used for DPT-2 or DPT-3.
-     * @param aAddress the address to write to.
-     * @param aValue the value to write.
-     * @return true if writing was successful, false otherwise.
-     * @see #groupWrite4BitInt
-     */
-    KnxTpUartSendResult groupAnswer4BitInt(String, uint8_t aValue);
-
-    /**
-     * Send a 4bit answer to a group address.
-     * This can be used for DPT-2 or DPT-3.
-     * @param aAddress the address to write to.
-     * @param aValue the value to write.
-     * @return true if writing was successful, false otherwise.
-     * @see #groupWrite4BitInt
-     */
-    KnxTpUartSendResult groupAnswer4BitInt(uint16_t, uint8_t aValue);
-
-    /**
-     * Send a boolean + 3 bit answer (DPT-3) to a group address.
-     * @param aAddress the address to write to.
-     * @param aDirection (1vit value).
-     * @param aSteps (3bit value)
-     * @return true if writing was successful, false otherwise.
-     * @see #groupWrite4BitDim
-     */
-    KnxTpUartSendResult groupAnswer4BitDim(String, bool aDirection, uint8_t aSteps);
-
-    /**
-     * Send a boolean + 3 bit answer (DPT-3) to a group address.
-     * @param aAddress the address to write to.
-     * @param aDirection (1vit value).
-     * @param aSteps (3bit value)
-     * @return true if writing was successful, false otherwise.
-     * @see #groupWrite4BitDim
-     */
-    KnxTpUartSendResult groupAnswer4BitDim(uint16_t, bool aDirection, uint8_t aSteps);
-
-    /**
-	 * Send a 8bit signed integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite1ByteInt
-	 */
-    KnxTpUartSendResult groupAnswer1ByteInt(String aAddress, int8_t aValue);
-
-    /**
-	 * Send a 8bit signed integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite1ByteInt
-	 */
-    KnxTpUartSendResult groupAnswer1ByteInt(uint16_t aAddress, int8_t aValue);
-
-    /**
-	 * Send a 8bit unsigned integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite1ByteUInt
-	 */
-    KnxTpUartSendResult groupAnswer1ByteUInt(String aAddress, uint8_t aValue);
-    /**
-	 * Send a 8bit unsigned integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite1ByteUInt
-	 */
-    KnxTpUartSendResult groupAnswer1ByteUInt(uint16_t aAddress, uint8_t aValue);
-
-    /**
-	 * Send a 16bit signed integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteInt
-	 */
-    KnxTpUartSendResult groupAnswer2ByteInt(String aAddress, int16_t aValue);
-    /**
-	 * Send a 16bit signed integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteInt
-	 */
-    KnxTpUartSendResult groupAnswer2ByteInt(uint16_t aAddress, int16_t aValue);
-
-    /**
-	 * Send a 16bit unsigned integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteUInt
-	 */
-    KnxTpUartSendResult groupAnswer2ByteUInt(String aAddress, uint16_t aValue);
-
-    /**
-	 * Send a 16bit unsigned integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteUInt
-	 */
-    KnxTpUartSendResult groupAnswer2ByteUInt(uint16_t aAddress, uint16_t aValue);
-
-    /**
-	 * Send a 32bit signed integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteInt
-	 */
-    KnxTpUartSendResult groupAnswer4ByteInt(uint16_t aAddress, int32_t aValue);
-
-    /**
-	 * Send a 32bit unsigned integer answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite4ByteUInt
-	 */
-    KnxTpUartSendResult groupAnswer4ByteUInt(uint16_t aAddress, uint32_t aValue);
-
-    /**
-	 * Send a 16bit float answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteFloat
-	 */
-    KnxTpUartSendResult groupAnswer2ByteFloat(String aAddress, float aValue);
-
-    /**
-	 * Send a 16bit float answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite2ByteFloat
-	 */
-    KnxTpUartSendResult groupAnswer2ByteFloat(uint16_t aAddress, float aValue);
-
-    /**
-	 * Send a 3 byte answer of DPT 10 (time).
-	 * @param aAddress the address to write to.
-	 * @param aWeekday the day of the week.
-	 * @param aHour the hour.
-	 * @param aMinute the minute.
-	 * @param aSecond the second.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupAnswer3ByteTime(String aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
-
-    /**
-	 * Send a 3 byte answer of DPT 10 (time).
-	 * @param aAddress the address to write to.
-	 * @param aWeekday the day of the week.
-	 * @param aHour the hour.
-	 * @param aMinute the minute.
-	 * @param aSecond the second.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupAnswer3ByteTime(uint16_t aAddress, uint8_t aWeekday, uint8_t aHour, uint8_t aMinute, uint8_t aSecond);
-
-    /**
-     * Send a 3 byte value of DPT 11 (date).
-     * @param aAddress the address to write to.
-     * @param aDay the day of the month.
-     * @param aMonth the month of the year.
-     * @param aYear the year.
-     * @return true if writing was successful, false otherwise.
-     */
-    KnxTpUartSendResult groupAnswer3ByteDate(String aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
-
-    /**
-     * Send a 3 byte value of DPT 11 (date).
-     * @param aAddress the address to write to.
-     * @param aDay the day of the month.
-     * @param aMonth the month of the year.
-     * @param aYear the year.
-     * @return true if writing was successful, false otherwise.
-     */
-    KnxTpUartSendResult groupAnswer3ByteDate(uint16_t aAddress, uint8_t aDay, uint8_t aMonth, uint8_t aYear);
-
-    /**
-	 * Send a 32bit float answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite4ByteFloat
-	 */
-    KnxTpUartSendResult groupAnswer4ByteFloat(String aAddress, float aValue);
-
-    /**
-	 * Send a 32bit float answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 * @see #groupWrite4ByteFloat
-	 */
-    KnxTpUartSendResult groupAnswer4ByteFloat(uint16_t aAddress, float aValue);
-
-    /**
-	 * Send a 14 byte text answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupAnswer14ByteText(String aAddress, String aValue);
-
-    /**
-	 * Send a 14 byte text answer to a group address.
-	 * @param aAddress the address to write to.
-	 * @param aValue the value to send.
-	 * @return true if writing was successful, false otherwise.
-	 */
-    KnxTpUartSendResult groupAnswer14ByteText(uint16_t aAddress, String aValue);
-
-    /**
-     * Send a buffer to a group address.
-     * @param aAddress the address to write to.
-     * @param aBuffer the buffer to send.
-     * @param aSize the number of bytes to send from buffer.
-     * @return true if writing was successful, false otherwise.
-     */
-    KnxTpUartSendResult groupAnswerBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize);
-
-    // Start of definitions for uint16_t address functions
-
-    /**
-     * Request an answer for the actual value of a group address.
-     * This does not wait for an answer, waiting for an answer by calling
-     * #serialEvent and #getReceivedTelegram need to be performed afterwards.
-     * @param aAddress the address to request an answer from.
-     * @return true if writing was successful, false otherwise.
-     */
-    KnxTpUartSendResult groupRead(String aAddress);
+    KnxTpUartSendResult groupWriteBuffer(uint16_t aAddress, uint8_t* aBuffer, uint8_t aSize, boolean aIsAnswer = false);
 
     /**
      * Request an answer for the actual value of a group address.
@@ -804,15 +443,6 @@ class KnxTpUart {
     KnxTpUartSendResult sendTelegramAndRepeat(KnxTelegram* aTelegram, uint8_t aCount);
 
 #ifdef KNX_SUPPORT_LISTEN_GAS
-
-    /**
-     * Add a group address to the list of listening addresses.
-     * @param aAddress the address to listen to.
-     * @return true if the address was added, false otherwise.
-     * False very likely means that no space is left in the list and
-     * #setListenAddressCount need to be called with a bigger value.
-     */
-    bool addListenGroupAddress(String aAddress);
 
     /**
 	 * Add a group address to the list of listening addresses.
@@ -948,16 +578,6 @@ class KnxTpUart {
     KnxTpUartSerialEventType readKNXTelegram();
 
     /**
-     * Initialize the internal telegram buffer for a new message.
-     * This message initializes a telegram send to a group address.
-     * @param aPayloadLength the payload length
-     * @param aCommand the command type
-     * @param aAddress the target group address.
-     * @param aFirstDataByte the first data byte.
-     */
-    void createKNXMessageFrame(uint8_t aPayloadLength, KnxCommandType aCommand, String aAddress, uint8_t aFirstDataByte);
-
-    /**
 	 * Initialize the internal telegram buffer for a new message.
      * This message initializes a telegram send to a group address.
 	 * @param aPayloadLength the payload length
@@ -966,16 +586,6 @@ class KnxTpUart {
 	 * @param aFirstDataByte the first data byte.
 	 */
     void createKNXMessageFrame(uint8_t aPayloadLength, KnxCommandType aCommand, uint16_t aAddress, uint8_t aFirstDataByte);
-
-    /**
-     * Initialize the internal telegram buffer for a new message.
-     * This message initializes a telegram send to an individual device.
-     * @param aPayloadLength the payload length
-     * @param aCommand the command type
-     * @param aAddress the target individual address.
-     * @param aFirstDataByte the first data byte.
-     */
-    void createKNXMessageFrameIndividual(uint8_t aPayloadLength, KnxCommandType aCommand, String aAddress, uint8_t aFirstDataByte);
 
     /**
      * Initialize the internal telegram buffer for a new message.
