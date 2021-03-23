@@ -42,15 +42,6 @@
 // define TPUART_DEBUG_V for verbose debug messages
 //#define TPUART_DEBUG_V
 
-#ifdef TPUART_DEBUG
-	#define DBG_PRINT(aMsg) ({if (_dbg != NULL) {_dbg->print(aMsg);}})
-	#define DBG_PRINTLN(aMsg) ({if (_dbg != NULL) {_dbg->println(aMsg);}})
-#else
-	#define DBG_PRINT(aMsg) ({})
-	#define DBG_PRINTLN(aMsg) ({})
-#endif
-
-
 // Timeout for reading a byte from TPUART
 // Change only if you know what you're doing
 #define SERIAL_READ_TIMEOUT_MS 10

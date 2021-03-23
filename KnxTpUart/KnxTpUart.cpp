@@ -9,6 +9,17 @@
 
 #include "KnxTpUart.h"
 
+
+
+#ifdef TPUART_DEBUG
+	#define DBG_PRINT(aMsg) ({if (_dbg != NULL) {_dbg->print(aMsg);}})
+	#define DBG_PRINTLN(aMsg) ({if (_dbg != NULL) {_dbg->println(aMsg);}})
+#else
+	#define DBG_PRINT(aMsg) ({})
+	#define DBG_PRINTLN(aMsg) ({})
+#endif
+
+
 /**
  * Code taken from https://www.norwegiancreations.com/2018/10/arduino-tutorial-avoiding-the-overflow-issue-when-using-millis-and-micros/
  * Simple way to check for a timeout.
